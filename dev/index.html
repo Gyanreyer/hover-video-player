@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo</title>
+    <script type="module" src="../dist/hover-video-player.js"></script>
+  </head>
+  <body>
+    <hover-video-player
+      src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+      style="width: 500px"
+      loop="false"
+    >
+      <div slot="paused-overlay" style="background-color: red">I AM PAUSED</div>
+      <div slot="loading-overlay" style="background-color: yellow">
+        I AM LOADING
+      </div>
+    </hover-video-player>
+  </body>
+</html>

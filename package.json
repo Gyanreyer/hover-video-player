@@ -1,0 +1,20 @@
+{
+  "name": "hover-video-player",
+  "version": "0.0.0",
+  "description": "A web component for rendering videos that play on hover, including support for mouse and touch events and a simple API for adding thumbnails and loading states.",
+  "main": "dist/index.js",
+  "scripts": {
+    "serve": "web-dev-server --node-resolve --open --watch",
+    "dev": "tsc --watch"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "lit": "^2.2.2"
+  },
+  "devDependencies": {
+    "@web/dev-server": "^0.1.30",
+    "ts-lit-plugin": "^1.2.1",
+    "typescript": "^4.6.3"
+  }
+}
