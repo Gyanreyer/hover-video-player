@@ -4,15 +4,37 @@
   <head>
     <meta charset="utf-8" />
     <title>Demo</title>
-    <script type="module" src="../dist/hover-video-player.js"></script>
+    <script type="module" src="../dist/index.js"></script>
+    <style>
+      #hovertarget {
+        width: 100px;
+        height: 100px;
+        background-color: red;
+      }
+    </style>
   </head>
   <body>
-    <hover-video-player
-      src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-      style="width: 500px"
-      loop="false"
-    >
-      <div slot="paused-overlay" style="background-color: red">I AM PAUSED</div>
+    <div id="hovertarget">HOVER ON ME</div>
+    <hover-video-player style="width: 500px" hover-target="#hovertarget">
+      <video
+        slot="video"
+        src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        playsinline
+      >
+        <!-- <source
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+          type="video/mp4"
+        /> -->
+      </video>
+      <div
+        slot="paused-overlay"
+        style="background-color: rgba(255, 0, 0, 0.5); height: 100%"
+      >
+        I AM PAUSED
+      </div>
+      <div slot="hover-overlay" style="background-color: rgba(0, 0, 255, 0.5)">
+        I AM HOVERED
+      </div>
       <div slot="loading-overlay" style="background-color: yellow">
         I AM LOADING
       </div>

@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "serve": "web-dev-server --node-resolve --open --watch",
+    "build": "tsc --build",
     "dev": "tsc --watch"
   },
   "author": "",
