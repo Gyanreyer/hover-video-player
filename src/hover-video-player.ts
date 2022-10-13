@@ -1,5 +1,5 @@
 import { LitElement, html, css, PropertyValues } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 
 @customElement("hover-video-player")
 export class HoverVideoPlayer extends LitElement {
@@ -21,28 +21,19 @@ export class HoverVideoPlayer extends LitElement {
   @property({ attribute: "unload-on-pause", type: Boolean })
   unloadOnPause: boolean = false;
 
-  @property({
-    attribute: "sizing-mode",
-    type: String,
-  })
-  sizingMode: "video" | "overlay" | "container" | "manual" = "video";
-
-  @query("[part='container']")
-  containerElement!: HTMLDivElement;
-
   @property()
   video: HTMLVideoElement | null = null;
 
   @property()
-  hoverTarget: HTMLElement | null = null;
+  hoverTarget: Element | null = null;
 
   private _hasPausedOverlay: boolean = false;
 
   @state()
-  private _isHovering: boolean = false;
+  isHovering: boolean = false;
 
   @state()
-  private playbackState: "paused" | "loading" | "playing" = "paused";
+  playbackState: "paused" | "loading" | "playing" = "paused";
 
   constructor() {
     super();
@@ -57,8 +48,9 @@ export class HoverVideoPlayer extends LitElement {
    * Handler updates state and starts video playback when the user hovers over the hover target.
    */
   private _onHoverStart() {
-    if (!this._isHovering) {
-      this._isHovering = true;
+    if (!this.isHovering) {
+      this.isHovering = true;
+      this.shadowRoot?.host.setAttribute("data-is-hovering", "");
       this._startPlayback();
 
       this.dispatchEvent(new CustomEvent("hoverstart"));
@@ -69,8 +61,9 @@ export class HoverVideoPlayer extends LitElement {
    * Handler updates state and pauses video playback when the user stops hovering over the hover target.
    */
   private _onHoverEnd() {
-    if (this._isHovering) {
-      this._isHovering = false;
+    if (this.isHovering) {
+      this.isHovering = false;
+      this.shadowRoot?.host.removeAttribute("data-is-hovering");
       this._stopPlayback();
 
       this.dispatchEvent(new CustomEvent("hoverend"));
@@ -82,7 +75,7 @@ export class HoverVideoPlayer extends LitElement {
    */
   private _onTouchOutsideOfHoverTarget(event: TouchEvent) {
     // Don't do anything if the user isn't currently hovering over the player
-    if (!this._isHovering) return;
+    if (!this.isHovering) return;
 
     if (
       !this.hoverTarget ||
@@ -96,7 +89,7 @@ export class HoverVideoPlayer extends LitElement {
   /**
    * Hooks up event listeners to the hover target so it can start listening for hover events that will trigger playback.
    */
-  private _addHoverTargetListeners(hoverTarget: HTMLElement) {
+  private _addHoverTargetListeners(hoverTarget: Element) {
     hoverTarget.addEventListener("mouseenter", this._onHoverStart);
     hoverTarget.addEventListener("mouseleave", this._onHoverEnd);
     hoverTarget.addEventListener("focus", this._onHoverStart);
@@ -111,7 +104,7 @@ export class HoverVideoPlayer extends LitElement {
    *
    * @param {HTMLElement} hoverTarget   The hover target element to remove event listeners from.
    */
-  private _removeHoverTargetListeners(hoverTarget: HTMLElement | null) {
+  private _removeHoverTargetListeners(hoverTarget: Element | null) {
     if (hoverTarget) {
       hoverTarget.removeEventListener("mouseenter", this._onHoverStart);
       hoverTarget.removeEventListener("mouseleave", this._onHoverEnd);
@@ -263,7 +256,7 @@ export class HoverVideoPlayer extends LitElement {
       // If no selector is provided, we'll default to using this component's container element as the hover target
       this.hoverTarget = this.hoverTargetSelector
         ? document.querySelector(this.hoverTargetSelector)
-        : this.containerElement;
+        : this.shadowRoot?.host ?? null;
 
       if (!this.hoverTarget) {
         console.error("hover-video-player failed to find hover target with selector", this.hoverTargetSelector);
@@ -282,6 +275,10 @@ export class HoverVideoPlayer extends LitElement {
         this._addHoverTargetListeners(this.hoverTarget);
       }
     }
+
+    if (changedProperties.has("playbackState")) {
+      this.shadowRoot?.host.setAttribute("data-playback-state", this.playbackState);
+    }
   }
 
   static styles = css`
@@ -289,25 +286,29 @@ export class HoverVideoPlayer extends LitElement {
       position: relative;
     }
 
-    /* The container is styled as inline-block for "video" and "overlay" sizing modes */
-    [data-sizing-mode="video"],
-    [data-sizing-mode="overlay"] {
+    /* The container is styled as inline-block for "video" and "overlay" sizing modes 
+        If no sizing mode is set, we default to "video" */
+    :host(:not([sizing-mode])),
+    :host([sizing-mode="video"]),
+    :host([sizing-mode="overlay"]) {
       display: inline-block;
     }
 
-    [data-sizing-mode="video"] ::slotted(video) {
+    :host(:not([sizing-mode])) ::slotted(video),
+    :host([sizing-mode="video"]) ::slotted(video) {
       display: block;
       width: 100%;
     }
 
-    [data-sizing-mode="overlay"] ::slotted([slot="paused-overlay"]) {
+    :host([sizing-mode="overlay"]) ::slotted([slot="paused-overlay"]) {
       position: relative;
     }
 
-    [data-sizing-mode="overlay"] ::slotted(video),
-    [data-sizing-mode="container"] ::slotted(video),
-    [data-sizing-mode="video"] ::slotted([slot="paused-overlay"]),
-    [data-sizing-mode="container"] ::slotted([slot="paused-overlay"]),
+    :host([sizing-mode="overlay"]) ::slotted(video),
+    :host([sizing-mode="container"]) ::slotted(video),
+    :host(:not([sizing-mode])) ::slotted([slot="paused-overlay"]),
+    :host([sizing-mode="video"]) ::slotted([slot="paused-overlay"]),
+    :host([sizing-mode="container"]) ::slotted([slot="paused-overlay"]),
     ::slotted([slot="loading-overlay"]),
     ::slotted([slot="hover-overlay"]) {
       position: absolute;
@@ -336,15 +337,15 @@ export class HoverVideoPlayer extends LitElement {
       z-index: 2;
     }
 
-    [data-playback-state="paused"] ::slotted([slot="paused-overlay"]),
-    [data-playback-state="loading"] ::slotted([slot="paused-overlay"]),
-    [data-playback-state="loading"] ::slotted([slot="loading-overlay"]),
-    [data-is-hovering="true"] ::slotted([slot="hover-overlay"]) {
+    :host([data-playback-state="paused"]) ::slotted([slot="paused-overlay"]),
+    :host([data-playback-state="loading"]) ::slotted([slot="paused-overlay"]),
+    :host([data-playback-state="loading"]) ::slotted([slot="loading-overlay"]),
+    :host([data-is-hovering="true"]) ::slotted([slot="hover-overlay"]) {
       opacity: 1;
       pointer-events: auto;
     }
 
-    [data-playback-state="loading"] ::slotted([slot="loading-overlay"]) {
+    :host([data-playback-state="loading"]) ::slotted([slot="loading-overlay"]) {
       /* Delay the loading overlay fading in */
       transition-delay: var(--loading-state-timeout);
     }
@@ -352,17 +353,10 @@ export class HoverVideoPlayer extends LitElement {
 
   render() {
     return html`
-      <div
-        part="container"
-        data-sizing-mode="${this.sizingMode}"
-        data-is-hovering="${this._isHovering}"
-        data-playback-state="${this.playbackState}"
-      >
-        <slot name="video" @slotchange=${this._onVideoSlotChanged}></slot>
-        <slot name="paused-overlay" @slotchange=${this._onPausedOverlaySlotChange}></slot>
-        <slot name="loading-overlay"></slot>
-        <slot name="hover-overlay"></slot>
-      </div>
+      <slot name="video" @slotchange=${this._onVideoSlotChanged}></slot>
+      <slot name="paused-overlay" @slotchange=${this._onPausedOverlaySlotChange}></slot>
+      <slot name="loading-overlay"></slot>
+      <slot name="hover-overlay"></slot>
       <style>
         :host {
           --overlay-transition-duration: ${this.overlayTransitionDuration}ms;
