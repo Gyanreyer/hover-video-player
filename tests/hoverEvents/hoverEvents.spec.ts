@@ -1,42 +1,52 @@
 import { test, expect } from '@playwright/test';
 
-test('hover-video-player component starts and stops playback as expected when the user hovers with a mouse', async ({ page }) => {
+test('hover-video-player component starts and stops playback as expected when the user hovers', async ({ page, isMobile }) => {
+  await page.route("**/*.mp4", (route) => new Promise((resolve) => {
+    // Add a .25 second delay before resolving the request for the video asset so we can
+    // test that the player enters a loading state while waiting for the video to load.
+    setTimeout(() => resolve(route.continue()), 250);
+  }));
   await page.goto('/tests/hoverEvents/index.html');
 
   const hoverVideoPlayer = await page.locator("hover-video-player");
-  await expect(hoverVideoPlayer).toBeVisible();
-
   const video = await page.locator("hover-video-player video");
-  await expect(video).toHaveJSProperty("paused", true);
 
-  await hoverVideoPlayer.hover();
-  await expect(video).toHaveJSProperty("paused", false);
+  await Promise.all([
+    expect(hoverVideoPlayer).toBeVisible(),
+    expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", ""),
+    expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "paused"),
+    expect(video).toHaveJSProperty("paused", true),
+  ]);
 
-  await page.mouse.move(0, 0);
+  // Mouse over or tap the video player depending on if this is a touch device to start playback
+  if (isMobile) {
+    // Using dispatchEvent instead of tap() because tap gets a little flaky on iOS for somet reason
+    await hoverVideoPlayer.dispatchEvent("touchstart");
+  } else {
+    await hoverVideoPlayer.hover();
+  }
 
-  await expect(video).toHaveJSProperty("paused", true);
-});
+  await Promise.all([
+    expect(hoverVideoPlayer).toHaveAttribute("data-is-hovering", ""),
+    expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "loading"),
+  ]);
 
-test.describe("tests on touch devices", () => {
-  test.use({
-    hasTouch: true,
-  })
-  test("hover-video-player component starts and stops playback as expected when the user hovers with a touch screen", async ({ page }) => {
-    await page.goto('/tests/hoverEvents/index.html');
+  // The video should no longer be paused
+  await Promise.all([
+    expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "playing"),
+    expect(video).toHaveJSProperty("paused", false),
+  ]);
 
-    const hoverVideoPlayer = await page.locator("hover-video-player");
-    await expect(hoverVideoPlayer).toBeVisible();
-
-    const video = await page.locator("hover-video-player video");
-    await expect(video).toHaveJSProperty("paused", true);
-
-    // Tap on the player to start playback
-    await hoverVideoPlayer.tap();
-    await expect(video).toHaveJSProperty("paused", false);
-
-    // Tap outside of the player to pause again
-    await page.touchscreen.tap(0, 0);
-
-    await expect(video).toHaveJSProperty("paused", true);
-  });
+  // Mouse out or tap outside of the player to stop playback
+  if (isMobile) {
+    await page.dispatchEvent("body", "touchstart");
+  } else {
+    await page.mouse.move(0, 0);
+  }
+  // The video should be paused again
+  await Promise.all([
+    expect(video).toHaveJSProperty("paused", true),
+    expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", ""),
+    expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "paused"),
+  ]);
 });
