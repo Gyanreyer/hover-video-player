@@ -27,13 +27,13 @@ export class HoverVideoPlayer extends LitElement {
   @property()
   hoverTarget: Element | null = null;
 
-  private _hasPausedOverlay: boolean = false;
-
   @state()
   isHovering: boolean = false;
 
   @state()
   playbackState: "paused" | "loading" | "playing" = "paused";
+
+  private _hasPausedOverlay: boolean = false;
 
   constructor() {
     super();
@@ -50,7 +50,7 @@ export class HoverVideoPlayer extends LitElement {
   private _onHoverStart() {
     if (!this.isHovering) {
       this.isHovering = true;
-      this.shadowRoot?.host.setAttribute("data-is-hovering", "");
+      this.setAttribute("data-is-hovering", "");
       this._startPlayback();
 
       this.dispatchEvent(new CustomEvent("hoverstart"));
@@ -63,7 +63,7 @@ export class HoverVideoPlayer extends LitElement {
   private _onHoverEnd() {
     if (this.isHovering) {
       this.isHovering = false;
-      this.shadowRoot?.host.removeAttribute("data-is-hovering");
+      this.removeAttribute("data-is-hovering");
       this._stopPlayback();
 
       this.dispatchEvent(new CustomEvent("hoverend"));
@@ -277,7 +277,7 @@ export class HoverVideoPlayer extends LitElement {
     }
 
     if (changedProperties.has("playbackState")) {
-      this.shadowRoot?.host.setAttribute("data-playback-state", this.playbackState);
+      this.setAttribute("data-playback-state", this.playbackState);
     }
   }
 
