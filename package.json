@@ -5,19 +5,17 @@
   "main": "dist/index.js",
   "scripts": {
     "serve": "web-dev-server --node-resolve --watch",
-    "build": "tsc --build",
-    "dev": "tsc --watch",
+    "build": "NODE_ENV=prod node build.mjs && tsc --emitDeclarationOnly",
+    "dev": "node build.mjs --watch",
     "test": "npx playwright test"
   },
-  "author": "",
+  "author": "Ryan Geyer",
   "license": "MIT",
-  "dependencies": {
-    "lit": "^2.2.2"
-  },
   "devDependencies": {
     "@playwright/test": "^1.27.1",
     "@web/dev-server": "^0.1.30",
-    "ts-lit-plugin": "^1.2.1",
-    "typescript": "^4.6.3"
+    "esbuild": "^0.15.11",
+    "esbuild-minify-templates": "^0.9.2",
+    "typescript": "^4.8.4"
   }
 }

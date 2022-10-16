@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module" src="/dist/index.js"></script>
+    <style>
+      html, body {
+        margin: 0;
+      }
+
+      hover-video-player div[slot="paused-overlay"] {
+        background-color: red;
+      }
+
+      hover-video-player div[slot="loading-overlay"] {
+        background-color: yellow;
+      }
+
+      hover-video-player div[slot="hover-overlay"] {
+        background-color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <hover-video-player>
+      <video
+        src="/tests/fixtures/BigBuckBunny.mp4"
+        playsinline
+        muted
+        preload="metadata"
+      ></video>
+      <div slot="paused-overlay" class="paused">The video is paused.</div>
+      <div slot="loading-overlay" class="loading">The video is loading...</div>
+      <div slot="hover-overlay" class="hover">The user is hovering!</div>
+    </hover-video-player>
+  </body>
+</html>

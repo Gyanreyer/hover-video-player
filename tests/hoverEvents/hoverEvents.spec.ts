@@ -11,6 +11,7 @@ test('hover-video-player component starts and stops playback as expected when th
   const hoverVideoPlayer = await page.locator("hover-video-player");
   const video = await page.locator("hover-video-player video");
 
+  // The component's initial state should all be as expected; the user is not hovering and the video is not playing
   await Promise.all([
     expect(hoverVideoPlayer).toBeVisible(),
     expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", ""),
@@ -20,18 +21,19 @@ test('hover-video-player component starts and stops playback as expected when th
 
   // Mouse over or tap the video player depending on if this is a touch device to start playback
   if (isMobile) {
-    // Using dispatchEvent instead of tap() because tap gets a little flaky on iOS for somet reason
+    // Using dispatchEvent instead of tap() because tap gets a little flaky on the iPhone browser for some reason
     await hoverVideoPlayer.dispatchEvent("touchstart");
   } else {
     await hoverVideoPlayer.hover();
   }
 
+  // The component's attributes should be updated to show that the user is hovering and the video is loading
   await Promise.all([
     expect(hoverVideoPlayer).toHaveAttribute("data-is-hovering", ""),
     expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "loading"),
   ]);
 
-  // The video should no longer be paused
+  // The video should finish loading and start playing
   await Promise.all([
     expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "playing"),
     expect(video).toHaveJSProperty("paused", false),
@@ -43,7 +45,8 @@ test('hover-video-player component starts and stops playback as expected when th
   } else {
     await page.mouse.move(0, 0);
   }
-  // The video should be paused again
+
+  // The component's state should be updated to show that the user is no longer hovering and the video is paused again
   await Promise.all([
     expect(video).toHaveJSProperty("paused", true),
     expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", ""),
