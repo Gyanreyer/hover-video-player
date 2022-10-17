@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module" src="/dist/index.js"></script>
+    <style>
+      hover-video-player {
+        --loading-timeout-duration: 200ms;
+      }
+
+      hover-video-player div[slot="paused-overlay"] {
+        --overlay-transition-duration: 0.5s;
+        background-color: red;
+      }
+
+      hover-video-player div[slot="loading-overlay"] {
+        --overlay-transition-duration: 0.1s;
+        background-color: yellow;
+      }
+
+      hover-video-player div[slot="hover-overlay"] {
+        --overlay-transition-duration: 0.3s;
+        background-color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <hover-video-player>
+      <video
+        src="/tests/fixtures/BigBuckBunny.mp4"
+        playsinline
+        muted
+        preload="none"
+      ></video>
+      <div slot="paused-overlay">The player is paused</div>
+      <div slot="loading-overlay">The video is loading</div>
+      <div slot="hover-overlay">The user is hovering</div>
+    </hover-video-player>
+  </body>
+</html>

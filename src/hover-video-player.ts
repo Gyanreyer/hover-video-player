@@ -1,7 +1,7 @@
 const supportsAdoptingStyleSheets =
   ShadowRoot &&
   'adoptedStyleSheets' in ShadowRoot.prototype &&
-  'replaceSync' in CSSStyleSheet.prototype;
+  'replace' in CSSStyleSheet.prototype;
 
 enum PlaybackState {
   Paused = "paused",
@@ -21,8 +21,8 @@ const hoverVideoPlayerStyleText = /* css */`
   :host {
     display: inline-block;
     position: relative;
-    --overlay-transition-duration: 400ms;
-    --loading-state-timeout: 200ms;
+    --overlay-transition-duration: 0.4s;
+    --loading-timeout-duration: 0.2s;
   }
 
   :host([sizing-mode="video"]) ::slotted(video) {
@@ -82,21 +82,21 @@ const hoverVideoPlayerStyleText = /* css */`
   :host([data-playback-state="paused"]) ::slotted([slot="paused-overlay"]),
   :host([data-playback-state="loading"]) ::slotted([slot="paused-overlay"]),
   :host([data-playback-state="loading"]) ::slotted([slot="loading-overlay"]),
-  :host([data-is-hovering="true"]) ::slotted([slot="hover-overlay"]) {
+  :host([data-is-hovering]) ::slotted([slot="hover-overlay"]) {
     opacity: 1;
     pointer-events: auto;
   }
 
   :host([data-playback-state="loading"]) ::slotted([slot="loading-overlay"]) {
     /* Delay the loading overlay fading in */
-    transition-delay: var(--loading-state-timeout);
+    transition-delay: var(--loading-timeout-duration);
   }
 `;
 
 let hoverVideoPlayerStyleSheet: CSSStyleSheet | null = null;
 if (supportsAdoptingStyleSheets) {
   hoverVideoPlayerStyleSheet = new CSSStyleSheet();
-  hoverVideoPlayerStyleSheet.replaceSync(hoverVideoPlayerStyleText);
+  hoverVideoPlayerStyleSheet.replace(hoverVideoPlayerStyleText);
 } else {
   // If the browser (cough cough Safari) doesn't support adoptedStyleSheets, we'll
   // just append a style element to the template. Not as efficient, but it works.
@@ -279,7 +279,6 @@ export class HoverVideoPlayer extends HTMLElement {
 
     if (this._hasPausedOverlay) {
       const transitionDurationCSSVarValue = getComputedStyle(this).getPropertyValue("--overlay-transition-duration");
-      console.log(transitionDurationCSSVarValue);
       if (transitionDurationCSSVarValue.endsWith("ms")) {
         overlayTransitionDuration = parseFloat(transitionDurationCSSVarValue);
       } else {
@@ -355,7 +354,8 @@ export class HoverVideoPlayer extends HTMLElement {
    * This informs whether we should delay pausing the video if we have a paused overlay that needs to fade in first.
    */
   private _onPausedOverlaySlotChange(target: HTMLSlotElement) {
-    this._hasPausedOverlay = target.childElementCount > 0;
+    const slotNodes = target.assignedNodes({ flatten: true });
+    this._hasPausedOverlay = slotNodes.length > 0;
   }
 
   private _onSlotChange(event: Event) {
