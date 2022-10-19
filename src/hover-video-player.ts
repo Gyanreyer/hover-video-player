@@ -111,7 +111,7 @@ const observedAttributes = [
   "unload-on-pause",
 ] as const;
 
-export class HoverVideoPlayer extends HTMLElement {
+export default class HoverVideoPlayer extends HTMLElement {
   static get observedAttributes() {
     return observedAttributes;
   }
@@ -126,7 +126,27 @@ export class HoverVideoPlayer extends HTMLElement {
   // The element which we will watch for hover events to start and stop video playback.
   // This maps to the element with the selector set in the "hover-target" attribute if applicable,
   // or else will just be this component's host element.
-  hoverTarget: Element | null = null;
+  private _hoverTarget: Element = this;
+  /**
+   * hoverTarget setter allows you to change the hover target element programmatically if you don't
+   * want to deal with the `hover-target` selector attribute.
+   *
+   * @example
+   * const player = document.querySelector('hover-video-player');
+   * player.hoverTarget = document.querySelector('.my-hover-target');
+   */
+  set hoverTarget(newHoverTarget: Element | null) {
+    // Remove any `hover-target` attribute to reduce confusion after setting the hover target programmatically
+    this.removeAttribute("hover-target");
+    this._setHoverTarget(newHoverTarget || this);
+  }
+  /**
+   * hoverTarget getter returns the current hover target element that the player is using.
+   */
+  get hoverTarget(): Element {
+    return this._hoverTarget;
+  }
+
   // Whether the user is currently hovering over the hover target.
   isHovering: boolean = false;
   // The current playback state of the player.
@@ -193,9 +213,9 @@ export class HoverVideoPlayer extends HTMLElement {
     if (!this.isHovering) return;
 
     if (
-      !this.hoverTarget ||
+      !this._hoverTarget ||
       !(event.target instanceof Node) ||
-      !this.hoverTarget.contains(event.target)
+      !this._hoverTarget.contains(event.target)
     ) {
       this._onHoverEnd();
     }
@@ -370,19 +390,37 @@ export class HoverVideoPlayer extends HTMLElement {
     }
   }
 
-  private _setUpHoverTarget(hoverTargetSelector: string | null) {
-    const newHoverTarget = hoverTargetSelector ? document.querySelector(hoverTargetSelector) : this;
-    // If the hover target has changed, we need to remove the event listeners from the old hover target
-    // and add them to the new hover target
-    if (newHoverTarget !== this.hoverTarget) {
-      this._removeHoverTargetListeners(this.hoverTarget);
-      this.hoverTarget = newHoverTarget;
-      if (this.hoverTarget) {
-        this._addHoverTargetListeners(this.hoverTarget);
-      } else {
-        console.error("hover-video-player failed to find hover target with selector", hoverTargetSelector);
-      }
+  /**
+   * Updates the componen't shover target element, cleans up event listeners on the
+   * old hover target, and sets up new listeners on the new hover target.
+   *
+   * @param {Element} newHoverTarget
+   */
+  private _setHoverTarget(newHoverTarget: Element) {
+    if (newHoverTarget === this._hoverTarget) return;
+
+    this._removeHoverTargetListeners(this._hoverTarget);
+    this._hoverTarget = newHoverTarget;
+    this._addHoverTargetListeners(this._hoverTarget);
+  }
+
+  /**
+   * Gets the element for a given selector string and sets it as the component's hover target.
+   *
+   * @param {string | null} selector
+   */
+  private _setHoverTargetForSelector(selector: string | null) {
+    if (!selector) {
+      // If there's no selector, we'll just use the component's host element as the hover target
+      this._setHoverTarget(this);
+      return;
     }
+
+    const hoverTarget = document.querySelector(selector);
+    if (!hoverTarget) {
+      console.error(`hover-video-player failed to find a hover target element with the selector "${selector}".`);
+    }
+    this._setHoverTarget(hoverTarget || this);
   }
 
   /**
@@ -394,8 +432,15 @@ export class HoverVideoPlayer extends HTMLElement {
 
     this.shadowRoot?.addEventListener("slotchange", this._onSlotChange);
 
-    // Set up the hover target for the initial hover-target attribute value
-    this._setUpHoverTarget(this.getAttribute("hover-target"));
+    const hoverTargetSelectorAttribute = this.getAttribute("hover-target");
+    if (hoverTargetSelectorAttribute) {
+      // If an initial hover-target selector attribute is set,
+      // get the element for that selector and use it as the hover target
+      this._setHoverTargetForSelector(this.getAttribute("hover-target"));
+    } else {
+      // Otherwise, make sure we set up event listeners for the default hover target
+      this._addHoverTargetListeners(this._hoverTarget);
+    }
 
     if (this.getAttribute("sizing-mode") === null) {
       // If no sizing-mode is set, default to "video"
@@ -412,14 +457,21 @@ export class HoverVideoPlayer extends HTMLElement {
    */
   disconnectedCallback() {
     this.removeEventListener("slotchange", this._onSlotChange);
-    this._removeHoverTargetListeners(this.hoverTarget);
+    this._removeHoverTargetListeners(this._hoverTarget);
     window.removeEventListener("touchstart", this._onTouchOutsideOfHoverTarget);
   }
 
-  attributeChangedCallback(name: typeof observedAttributes[number], _oldValue: string, newValue: string) {
+  /**
+   * Lifecycle method fires when one of the component's observed attributes changes.
+   *
+   * @param {string} name - The name of the attribute that changed
+   * @param {string | null} _oldValue - The previous value of the attribute (currently unused)
+   * @param {string | null} newValue - The new value of the attribute (null if removed)
+   */
+  attributeChangedCallback(name: typeof observedAttributes[number], _oldValue: string | null, newValue: string | null) {
     switch (name) {
       case "hover-target": {
-        this._setUpHoverTarget(newValue);
+        this._setHoverTargetForSelector(newValue);
         break;
       }
       case "restart-on-pause":

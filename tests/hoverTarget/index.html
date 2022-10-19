@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module" src="/dist/index.js"></script>
+    <style>
+      #hover-target-1 {
+        width: 100px;
+        height: 100px;
+        background-color: red;
+      }
+
+      #hover-target-2 {
+        width: 100px;
+        height: 100px;
+        background-color: blue;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hover-target-1"></div>
+    <div id="hover-target-2"></div>
+    <hover-video-player
+      hover-target="#hover-target-1"
+      data-testid="has-initial-hover-target"
+    >
+      <video
+        src="/tests/assets/BigBuckBunny.mp4"
+        playsinline
+        muted
+        loop
+      ></video>
+    </hover-video-player>
+    <hover-video-player data-testid="no-initial-hover-target">
+      <video
+        src="/tests/assets/BigBuckBunny.mp4"
+        playsinline
+        muted
+        loop
+      ></video>
+    </hover-video-player>
+  </body>
+</html>
