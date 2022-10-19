@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module" src="/dist/index.js"></script>
+  </head>
+  <body>
+    <hover-video-player>
+      <video src="/tests/assets/BigBuckBunny.mp4" playsinline muted></video>
+    </hover-video-player>
+    <p>Hover start count: <span id="hover-start-count">0</span></p>
+    <p>Hover end count: <span id="hover-end-count">0</span></p>
+    <script>
+      const player = document.querySelector("hover-video-player");
+      const hoverStartCount = document.getElementById("hover-start-count");
+      const hoverEndCount = document.getElementById("hover-end-count");
+
+      player.addEventListener("hoverstart", () => {
+        hoverStartCount.textContent = Number(hoverStartCount.textContent) + 1;
+      });
+      player.addEventListener("hoverend", () => {
+        hoverEndCount.textContent = Number(hoverEndCount.textContent) + 1;
+      });
+    </script>
+  </body>
+</html>
