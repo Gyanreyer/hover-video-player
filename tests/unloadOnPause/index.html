@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module" src="/dist/index.js"></script>
+    <style>
+      hover-video-player {
+        width: 500px;
+      }
+    </style>
+  </head>
+  <body>
+    <hover-video-player unload-on-pause data-testid="src-attribute">
+      <video
+        src="/tests/assets/BigBuckBunny.mp4"
+        playsinline
+        muted
+        preload="none"
+      ></video>
+    </hover-video-player>
+    <hover-video-player unload-on-pause data-testid="source-tag">
+      <video playsinline muted preload="none">
+        <source src="/tests/assets/BigBuckBunny.mp4" type="video/mp4" />
+      </video>
+    </hover-video-player>
+    <hover-video-player unload-on-pause data-testid="no-preload-attribute">
+      <video playsinline muted src="/tests/assets/BigBuckBunny.mp4">
+      </video>
+  </body>
+</html>
