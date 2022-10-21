@@ -8,7 +8,7 @@ test("contents in the hover-overlay slot work as expected", async ({ page }) => 
 
     await Promise.all([
         expect(hoverOverlay).toHaveCSS("opacity", "0"),
-        expect(hoverOverlay).toHaveCSS("transition", "opacity 0.3s ease 0s"),
+        expect(hoverOverlay).toHaveCSS("transition", "opacity 0.3s ease 0s, visibility 0s ease 0.3s"),
     ]);
 
     await hoverVideoPlayer.hover();
@@ -34,7 +34,8 @@ test("contents in the paused-overlay slot work as expected", async ({ page }) =>
 
     await Promise.all([
         expect(pausedOverlay).toHaveCSS("opacity", "1"),
-        expect(pausedOverlay).toHaveCSS("transition", "opacity 0.5s ease 0s"),
+        // The visibility transition delay should be 0s because the paused-overlay is currently visible
+        expect(pausedOverlay).toHaveCSS("transition", "opacity 0.5s ease 0s, visibility 0s ease 0s"),
     ])
 
     await hoverVideoPlayer.hover();
@@ -42,10 +43,12 @@ test("contents in the paused-overlay slot work as expected", async ({ page }) =>
     await Promise.all([
         expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "loading"),
         expect(pausedOverlay).toHaveCSS("opacity", "1"),
+        expect(pausedOverlay).toHaveCSS("transition", "opacity 0.5s ease 0s, visibility 0s ease 0s"),
     ]);
     await Promise.all([
         expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "playing"),
         expect(pausedOverlay).toHaveCSS("opacity", "0"),
+        expect(pausedOverlay).toHaveCSS("transition", "opacity 0.5s ease 0s, visibility 0s ease 0.5s"),
     ]);
 
     await page.mouse.move(0, 0);
@@ -74,9 +77,12 @@ test("contents in the loading-overlay slot work as expected", async ({ page }) =
     const loadingOverlay = await hoverVideoPlayer.locator("[slot='loading-overlay']");
 
     await Promise.all([
+        expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "paused"),
+        // The loading timeout delay should not be applied to the opacity transition until it's fading in
+        // The visibility transition should have a delay equal to the overlay transition duration so that
+        // it doesn't become hidden until the overlay is full faded out
+        expect(loadingOverlay).toHaveCSS("transition", "opacity 0.1s ease 0s, visibility 0s ease 0.1s"),
         expect(loadingOverlay).toHaveCSS("opacity", "0"),
-        // The loading timeout delay should not be applied to the loading overlay's transition until it's fading in
-        expect(loadingOverlay).toHaveCSS("transition", "opacity 0.1s ease 0s"),
         expect(video).toHaveJSProperty("paused", true),
     ]);
 
@@ -84,8 +90,10 @@ test("contents in the loading-overlay slot work as expected", async ({ page }) =
 
     await Promise.all([
         expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "loading"),
-        // The loading timeout delay should be applied to the loading overlay's transition now
-        expect(loadingOverlay).toHaveCSS("transition", "opacity 0.1s ease 0.2s"),
+        // The loading timeout delay should now be applied to the opacity transition since it's fading in
+        // The visibility transition should have a delay equal to the loading timeout duration so that
+        // it doesn't become visibile until the overlay is ready to fade in
+        expect(loadingOverlay).toHaveCSS("transition", "opacity 0.1s ease 0.2s, visibility 0s ease 0.2s"),
         expect(loadingOverlay).toHaveCSS("opacity", "1"),
         expect(video).toHaveJSProperty("paused", false),
     ]);
@@ -93,6 +101,7 @@ test("contents in the loading-overlay slot work as expected", async ({ page }) =
     await Promise.all([
         expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "playing"),
         expect(loadingOverlay).toHaveCSS("opacity", "0"),
+        expect(loadingOverlay).toHaveCSS("transition", "opacity 0.1s ease 0s, visibility 0s ease 0.1s"),
     ]);
 
     await page.mouse.move(0, 0);

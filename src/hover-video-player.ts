@@ -68,8 +68,10 @@ const hoverVideoPlayerStyleText = /* css */`
   )) {
     display: block;
     opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--overlay-transition-duration);
+    visibility: hidden;
+    --transition-delay: 0s;
+    --visibility-transition-delay: var(--overlay-transition-duration);
+    transition: opacity var(--overlay-transition-duration) var(--transition-delay), visibility 0s calc(var(--transition-delay) + var(--visibility-transition-delay));
   }
 
   ::slotted([slot="paused-overlay"]) {
@@ -84,6 +86,7 @@ const hoverVideoPlayerStyleText = /* css */`
     z-index: 3;
   }
 
+  /* Fade in overlays for their appropriate playback states */
   :host(:is(
     [data-playback-state="paused"],
     [data-playback-state="loading"]
@@ -91,12 +94,13 @@ const hoverVideoPlayerStyleText = /* css */`
   :host([data-playback-state="loading"]) ::slotted([slot="loading-overlay"]),
   :host([data-is-hovering]) ::slotted([slot="hover-overlay"]) {
     opacity: 1;
-    pointer-events: auto;
+    visibility: visible;
+    --visibility-transition-delay: 0s;
   }
 
   :host([data-playback-state="loading"]) ::slotted([slot="loading-overlay"]) {
     /* Delay the loading overlay fading in */
-    transition-delay: var(--loading-timeout-duration);
+    --transition-delay: var(--loading-timeout-duration);
   }
 `;
 
