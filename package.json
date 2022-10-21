@@ -3,9 +3,10 @@
   "version": "0.0.0",
   "description": "A web component for rendering videos that play on hover, including support for mouse and touch events and a simple API for adding thumbnails and loading states.",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "scripts": {
     "serve": "web-dev-server --node-resolve --watch",
-    "build": "NODE_ENV=prod node build.mjs && tsc --emitDeclarationOnly",
+    "build": "node build.mjs && tsc --emitDeclarationOnly",
     "dev": "node build.mjs --watch",
     "test": "npx playwright test"
   },

@@ -1,7 +1,7 @@
 const supportsAdoptingStyleSheets =
   ShadowRoot &&
   'adoptedStyleSheets' in ShadowRoot.prototype &&
-  'replace' in CSSStyleSheet.prototype;
+  'replaceSync' in CSSStyleSheet.prototype;
 
 enum PlaybackState {
   Paused = "paused",
@@ -9,6 +9,7 @@ enum PlaybackState {
   Playing = "playing",
 }
 
+// Template element serves as the base template for the shadow DOM contents of each component instance
 const hoverVideoPlayerTemplate = document.createElement('template');
 hoverVideoPlayerTemplate.innerHTML = /* html */`
   <slot></slot>
@@ -17,6 +18,7 @@ hoverVideoPlayerTemplate.innerHTML = /* html */`
   <slot name="hover-overlay"></slot>
 `;
 
+// CSS stylesheet string which we'll use to style each component
 const hoverVideoPlayerStyleText = /* css */`
   :host {
     display: inline-block;
@@ -34,21 +36,22 @@ const hoverVideoPlayerStyleText = /* css */`
     position: relative;
   }
 
-  :host([sizing-mode="overlay"]) ::slotted(video),
-  :host([sizing-mode="container"]) ::slotted(video) {
+  :host(:is([sizing-mode="overlay"], [sizing-mode="container"])) ::slotted(video) {
     object-fit: cover;
   }
 
   /* Style videos and overlays to cover the container depending on the sizing mode */
   /* The video element should expand to cover the container in all but the "video" sizing mode */
-  :host([sizing-mode="overlay"]) ::slotted(video),
-  :host([sizing-mode="container"]) ::slotted(video),
+  :host(
+    :is(
+      [sizing-mode="overlay"],
+      [sizing-mode="container"],
+    )
+  ) ::slotted(video),
   /* The paused overlay should expand to cover the container in all but the "overlay" sizing mode */
-  :host([sizing-mode="video"]) ::slotted([slot="paused-overlay"]),
-  :host([sizing-mode="container"]) ::slotted([slot="paused-overlay"]),
+  :host(:is([sizing-mode="video"], [sizing-mode="container"])) ::slotted([slot="paused-overlay"]),
   /* The loading and hover overlays should always expand to cover the container */
-  ::slotted([slot="loading-overlay"]),
-  ::slotted([slot="hover-overlay"]) {
+  ::slotted(:is([slot="loading-overlay"], [slot="hover-overlay"])) {
     position: absolute;
     width: 100%;
     height: 100%;
@@ -58,9 +61,11 @@ const hoverVideoPlayerStyleText = /* css */`
     right: 0;
   }
 
-  ::slotted([slot="paused-overlay"]),
-  ::slotted([slot="loading-overlay"]),
-  ::slotted([slot="hover-overlay"]) {
+  ::slotted(:is(
+    [slot="paused-overlay"],
+    [slot="loading-overlay"],
+    [slot="hover-overlay"]
+  )) {
     display: block;
     opacity: 0;
     pointer-events: none;
@@ -79,8 +84,10 @@ const hoverVideoPlayerStyleText = /* css */`
     z-index: 3;
   }
 
-  :host([data-playback-state="paused"]) ::slotted([slot="paused-overlay"]),
-  :host([data-playback-state="loading"]) ::slotted([slot="paused-overlay"]),
+  :host(:is(
+    [data-playback-state="paused"],
+    [data-playback-state="loading"]
+  )) ::slotted([slot="paused-overlay"]),
   :host([data-playback-state="loading"]) ::slotted([slot="loading-overlay"]),
   :host([data-is-hovering]) ::slotted([slot="hover-overlay"]) {
     opacity: 1;
@@ -96,7 +103,6 @@ const hoverVideoPlayerStyleText = /* css */`
 let hoverVideoPlayerStyleSheet: CSSStyleSheet | null = null;
 if (supportsAdoptingStyleSheets) {
   hoverVideoPlayerStyleSheet = new CSSStyleSheet();
-  hoverVideoPlayerStyleSheet.replace(hoverVideoPlayerStyleText);
 } else {
   // If the browser (cough cough Safari) doesn't support adoptedStyleSheets, we'll
   // just append a style element to the template. Not as efficient, but it works.
@@ -117,9 +123,34 @@ export default class HoverVideoPlayer extends HTMLElement {
   }
 
   // Property which maps to the value of the "restart-on-pause" attribute
-  restartOnPause: boolean = false;
+  private _restartOnPause: boolean = false;
+  set restartOnPause(newValue: boolean) {
+    // Setter updates the restart-on-pause attribute; updating the internal
+    // _restartOnPause property is handled by the attributeChangedCallback
+    if (newValue) {
+      this.setAttribute("restart-on-pause", "");
+    } else {
+      this.removeAttribute("restart-on-pause");
+    }
+  }
+  get restartOnPause() {
+    return this._restartOnPause;
+  }
+
   // Property which maps to the value of the "unload-on-pause" attribute
-  unloadOnPause: boolean = false;
+  private _unloadOnPause: boolean = false;
+  set unloadOnPause(newValue: boolean) {
+    // Setter updates the unload-on-pause attribute; updating the internal
+    // _unloadOnPause property is handled by the attributeChangedCallback
+    if (newValue) {
+      this.setAttribute("unload-on-pause", "");
+    } else {
+      this.removeAttribute("unload-on-pause");
+    }
+  }
+  get unloadOnPause() {
+    return this._unloadOnPause;
+  }
 
   // The video element which this player component is controling
   video: HTMLVideoElement | null = null;
@@ -172,6 +203,12 @@ export default class HoverVideoPlayer extends HTMLElement {
     this._onSlotChange = this._onSlotChange.bind(this);
   }
 
+  /**
+   * Updates our state to reflact whether the user is hovering over the hover target and
+   * sets a data attribute to allow styling based on this state.
+   *
+   * @param {boolean} isHovering - The new value for isHovering
+   */
   private _updateIsHovering(isHovering: boolean) {
     this.isHovering = isHovering;
     if (isHovering) {
@@ -328,23 +365,35 @@ export default class HoverVideoPlayer extends HTMLElement {
 
         // If there's an `src` attribute on the video, we'll temporarily remove it
         const previousSrcAttribute = this.video.getAttribute("src");
+        this.video.removeAttribute("src");
+
         // We should also grab all <source> elements in the video and remove them
         const sourceElements = this.video.querySelectorAll("source");
-        for (const sourceElement of sourceElements) {
-          sourceElement.remove();
+        const sourceElementCount = sourceElements.length;
+        for (let i = 0; i < sourceElementCount; ++i) {
+          sourceElements[i].remove();
         }
+
+        // Wait until the video's sources are successfully emptied before restoring the sources
+        // to make sure things really do get fully unloaded.
+        this.video.addEventListener("emptied", (event) => {
+          const video = event.target as HTMLVideoElement;
+          // Restore the `src` attribute and/or source elements
+          if (previousSrcAttribute) {
+            video.src = previousSrcAttribute;
+          }
+          for (let i = 0; i < sourceElementCount; ++i) {
+            video.appendChild(sourceElements[i]);
+          }
+
+          video.currentTime = currentTime;
+        }, {
+          once: true,
+        });
+
         // Re-load the video with the sources removed so we unload everything from memory
         this.video.load();
 
-        // Restore the `src` attribute and/or source elements
-        if (previousSrcAttribute) {
-          this.video.setAttribute("src", previousSrcAttribute);
-        }
-        for (const sourceElement of sourceElements) {
-          this.video.appendChild(sourceElement);
-        }
-
-        this.video.currentTime = currentTime;
       }
     }, overlayTransitionDuration);
   }
@@ -359,10 +408,11 @@ export default class HoverVideoPlayer extends HTMLElement {
     if (videoElement) {
       this.video = videoElement;
 
-      if (this.unloadOnPause && !this.video.hasAttribute("preload")) {
-        // If the unloadOnPause property is set and no preload attribute is set on the video, default it to
-        // "metadata" so the video doesn't auto-load and defeat the purpose of unloading the video.
-        this.video.setAttribute("preload", "metadata");
+      if (this.unloadOnPause && (!this.video.preload || this.video.preload === "auto")) {
+        // If the unloadOnPause property is set and the video's preload property is set to "auto",
+        // we need to change it to "metadata"; otherwise, the browser will start pre-loading the entire
+        // video and defeat the whole purpose of unloading the video when it's paused.
+        this.video.preload = "metadata";
       }
     } else {
       console.error("hover-video-player failed to find a video element in the default slot.");
@@ -427,6 +477,10 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Lifecycle method that fires when the component is connected to the DOM.
    */
   connectedCallback() {
+    if (hoverVideoPlayerStyleSheet?.cssRules.length === 0) {
+      // Lazily only add rules to the stylesheet when a component is connected to the DOM for the first time
+      hoverVideoPlayerStyleSheet.replaceSync(hoverVideoPlayerStyleText);
+    }
     // The player is initially in a paused state
     this._updatePlaybackState(PlaybackState.Paused);
 
@@ -477,10 +531,10 @@ export default class HoverVideoPlayer extends HTMLElement {
       case "restart-on-pause":
         // If the new value for restart-on-pause is a string, the value should be considered truthy unless it's "false",
         // otherwise we'll assume it's null/undefined meaning the attribute isn't set, so the value should be false.
-        this.restartOnPause = typeof newValue === "string" ? newValue !== "false" : false;
+        this._restartOnPause = typeof newValue === "string" ? newValue !== "false" : false;
         break;
       case "unload-on-pause":
-        this.unloadOnPause = typeof newValue === "string" ? newValue !== "false" : false;
+        this._unloadOnPause = typeof newValue === "string" ? newValue !== "false" : false;
         break;
       default:
     }
