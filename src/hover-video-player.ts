@@ -200,6 +200,7 @@ export default class HoverVideoPlayer extends HTMLElement {
     }
     shadowRoot.appendChild(hoverVideoPlayerTemplate.content.cloneNode(true));
 
+    // Bind `this` for event handlers to make sure nothing weird happens
     this._onHoverStart = this._onHoverStart.bind(this);
     this._onHoverEnd = this._onHoverEnd.bind(this);
     this._onTouchOutsideOfHoverTarget =
@@ -432,14 +433,20 @@ export default class HoverVideoPlayer extends HTMLElement {
     this._hasPausedOverlay = slotNodes.length > 0;
   }
 
+  /**
+   * Handles changes to this component's slots.
+   */
   private _onSlotChange(event: Event) {
     const target = event?.target as HTMLSlotElement;
 
     switch (target.name) {
       case "paused-overlay":
+        // If the paused overlay slot changed, update whether we have a paused overlay
         this._onPausedOverlaySlotChange(target);
         break;
       case "":
+        // If the default slot changed, get the video element from it which
+        // this component should control
         this._onDefaultSlotChange(target);
     }
   }
