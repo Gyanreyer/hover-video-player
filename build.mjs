@@ -9,6 +9,8 @@ await esbuild.build({
   plugins: [minifyTemplates(), writeFiles()],
   write: false, // this needs to be left to the writeFiles plugin
   minify: true,
+  // Mangle all internal private properties, which start with an underscore
+  mangleProps: /^_.+$/,
   sourcemap: true,
   watch: shouldWatch,
   logLevel: "info",
