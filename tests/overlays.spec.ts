@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test("contents in the hover-overlay slot work as expected", async ({ page }) => {
-    await page.goto("/tests/overlays/index.html");
+    await page.goto("/tests/overlays.html");
 
     const hoverVideoPlayer = await page.locator("hover-video-player");
     const hoverOverlay = await hoverVideoPlayer.locator("[slot='hover-overlay']");
@@ -26,7 +26,7 @@ test("contents in the paused-overlay slot work as expected", async ({ page }) =>
         // test that the player enters a loading state while waiting for the video to load.
         setTimeout(() => resolve(route.continue()), 250);
     }));
-    await page.goto("/tests/overlays/index.html");
+    await page.goto("/tests/overlays.html");
 
     const hoverVideoPlayer = await page.locator("hover-video-player");
     const video = await hoverVideoPlayer.locator("video");
@@ -70,7 +70,7 @@ test("contents in the loading-overlay slot work as expected", async ({ page }) =
         // test that the loading overlay fades in while waiting for the video to load.
         setTimeout(() => resolve(route.continue()), 500);
     }));
-    await page.goto("/tests/overlays/index.html");
+    await page.goto("/tests/overlays.html");
 
     const hoverVideoPlayer = await page.locator("hover-video-player");
     const video = await hoverVideoPlayer.locator("video");

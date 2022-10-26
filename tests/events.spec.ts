@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test("fires hoverstart and hoverend events as expected", async ({ page }) => {
-    await page.goto("/tests/events/index.html");
+    await page.goto("/tests/events.html");
 
     const component = await page.locator("hover-video-player");
     const hoverStartCounter = await page.locator("#hover-start-count");

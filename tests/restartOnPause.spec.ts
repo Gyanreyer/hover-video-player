@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test("restartOnPause causes the video to reset to the beginning when paused", async ({ page }) => {
-    await page.goto("/tests/restartOnPause/index.html");
+    await page.goto("/tests/restartOnPause.html");
 
     const hoverVideoPlayer = await page.locator("hover-video-player");
     const video = await hoverVideoPlayer.locator("video");

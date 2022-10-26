@@ -17,7 +17,7 @@ const expectComponentHasHoverTarget = async (page: Page, componentLocator: Locat
 }
 
 test("hoverTarget can be updated via attribute for a component with an initial hover target set", async ({ page }) => {
-    await page.goto("/tests/hoverTarget/index.html");
+    await page.goto("/tests/hoverTarget.html");
 
     const [componentWithInitialHoverTarget, hoverTarget1, hoverTarget2] = await Promise.all([
         page.locator("[data-testid='has-initial-hover-target']"),
@@ -56,7 +56,7 @@ test("hoverTarget can be updated via attribute for a component with an initial h
 });
 
 test("hoverTarget can be updated for a component without an initial hover target set", async ({ page }) => {
-    await page.goto("/tests/hoverTarget/index.html");
+    await page.goto("/tests/hoverTarget.html");
 
     const [componentWithNoInitialHoverTarget, hoverTarget1, hoverTarget2] = await Promise.all([
         page.locator("[data-testid='no-initial-hover-target']"),

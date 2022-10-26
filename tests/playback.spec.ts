@@ -6,7 +6,7 @@ test('hover-video-player component starts and stops playback as expected when th
     // test that the player enters a loading state while waiting for the video to load.
     setTimeout(() => resolve(route.continue()), 250);
   }));
-  await page.goto('/tests/playback/index.html');
+  await page.goto('/tests/playback.html');
 
   const hoverVideoPlayer = await page.locator("hover-video-player");
   const video = await page.locator("hover-video-player video");

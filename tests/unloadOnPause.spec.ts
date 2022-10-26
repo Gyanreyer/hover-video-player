@@ -4,7 +4,7 @@ const HAVE_NOTHING = 0;
 const HAVE_ENOUGH_DATA = 4;
 
 test("unload-on-pause unloads video sources as expected for videos whose source is set by the src attribute", async ({ page }) => {
-    await page.goto("/tests/unloadOnPause/index.html");
+    await page.goto("/tests/unloadOnPause.html");
 
     const componentWithSrcAttribute = await page.locator("[data-testid='src-attribute']");
     const videoWithSrcAttribute = await componentWithSrcAttribute.locator("video");
@@ -41,7 +41,7 @@ test("unload-on-pause unloads video sources as expected for videos whose source 
 });
 
 test("unload-on-pause unloads video sources as expected for videos whose source is set by source tags", async ({ page }) => {
-    await page.goto("/tests/unloadOnPause/index.html");
+    await page.goto("/tests/unloadOnPause.html");
 
     const componentWithSourceTag = await page.locator("[data-testid='source-tag']");
     const videoWithSourceTag = await componentWithSourceTag.locator("video");
@@ -78,7 +78,7 @@ test("unload-on-pause unloads video sources as expected for videos whose source 
 });
 
 test("if unload-on-pause is set and the video does not have a preload attribute set, it will default to metadata", async ({ page }) => {
-    await page.goto("/tests/unloadOnPause/index.html");
+    await page.goto("/tests/unloadOnPause.html");
 
     const component = await page.locator("[data-testid='no-preload-attribute']");
     const video = await component.locator("video");
@@ -87,7 +87,7 @@ test("if unload-on-pause is set and the video does not have a preload attribute 
 });
 
 test("interacts with restart-on-pause as expected", async ({ page }) => {
-    await page.goto("/tests/unloadOnPause/index.html");
+    await page.goto("/tests/unloadOnPause.html");
 
     const component = await page.locator("[data-testid='no-preload-attribute']");
     const video = await component.locator("video");

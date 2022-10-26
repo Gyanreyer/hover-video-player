@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('the sizing-mode attribute updates styles as expected', async ({ page }) => {
-  await page.goto('/tests/sizingMode/index.html');
+  await page.goto('/tests/sizingMode.html');
 
   const hoverVideoPlayer = await page.locator("hover-video-player");
   const video = await hoverVideoPlayer.locator("video");
