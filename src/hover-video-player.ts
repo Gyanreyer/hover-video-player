@@ -1,97 +1,10 @@
 export default class HoverVideoPlayer extends HTMLElement {
   // CSS stylesheet string which we'll use to style each component
-  private static _styles: string = /* css */`
-    :host {
-      display: inline-block;
-      position: relative;
-      --overlay-transition-duration: 0.4s;
-      --loading-timeout-duration: 0.2s;
-    }
-
-    :host([sizing-mode="video"]) ::slotted(video) {
-      display: block;
-      width: 100%;
-    }
-
-    :host([sizing-mode="overlay"]) ::slotted([slot="paused-overlay"]) {
-      position: relative;
-    }
-
-    :host(:is([sizing-mode="overlay"], [sizing-mode="container"])) ::slotted(video) {
-      object-fit: cover;
-    }
-
-    /* Style videos and overlays to cover the container depending on the sizing mode */
-    /* The video element should expand to cover the container in all but the "video" sizing mode */
-    :host(
-      :is(
-        [sizing-mode="overlay"],
-        [sizing-mode="container"],
-      )
-    ) ::slotted(video),
-    /* The paused overlay should expand to cover the container in all but the "overlay" sizing mode */
-    :host(:is([sizing-mode="video"], [sizing-mode="container"])) ::slotted([slot="paused-overlay"]),
-    /* The loading and hover overlays should always expand to cover the container */
-    ::slotted(:is([slot="loading-overlay"], [slot="hover-overlay"])) {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      right: 0;
-    }
-
-    ::slotted(:is(
-      [slot="paused-overlay"],
-      [slot="loading-overlay"],
-      [slot="hover-overlay"]
-    )) {
-      display: block;
-      opacity: 0;
-      visibility: hidden;
-      --transition-delay: 0s;
-      --visibility-transition-delay: var(--overlay-transition-duration);
-      transition: opacity var(--overlay-transition-duration) var(--transition-delay), visibility 0s calc(var(--transition-delay) + var(--visibility-transition-delay));
-    }
-
-    ::slotted([slot="paused-overlay"]) {
-      z-index: 1;
-    }
-
-    ::slotted([slot="loading-overlay"]) {
-      z-index: 2;
-    }
-
-    ::slotted([slot="hover-overlay"]) {
-      z-index: 3;
-    }
-
-    /* Fade in overlays for their appropriate playback states */
-    :host(:is(
-      [data-playback-state="paused"],
-      [data-playback-state="loading"]
-    )) ::slotted([slot="paused-overlay"]),
-    :host([data-playback-state="loading"]) ::slotted([slot="loading-overlay"]),
-    :host([data-is-hovering]) ::slotted([slot="hover-overlay"]) {
-      opacity: 1;
-      visibility: visible;
-      --visibility-transition-delay: 0s;
-    }
-
-    :host([data-playback-state="loading"]) ::slotted([slot="loading-overlay"]) {
-      /* Delay the loading overlay fading in */
-      --transition-delay: var(--loading-timeout-duration);
-    }
-  `;
+  private static _styles: string = require("./styles.css");
   private static _stylesheet: CSSStyleSheet | null;
 
-  private static _templateHTML: string = /* html */`
-    <slot></slot>
-    <slot name="paused-overlay"></slot>
-    <slot name="loading-overlay"></slot>
-    <slot name="hover-overlay"></slot>
-  `;
+  // Template HTML string which we'll use to create the component's shadow DOM
+  private static _templateHTML: string = require("./template.html");
   private static _templateElement: HTMLTemplateElement | null = null;
 
   private static _observedAttributes = [
