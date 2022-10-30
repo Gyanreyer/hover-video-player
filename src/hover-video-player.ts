@@ -11,20 +11,22 @@ export default class HoverVideoPlayer extends HTMLElement {
     "hover-target",
     "restart-on-pause",
     "unload-on-pause",
+    "playback-start-delay",
   ] as const
   static get observedAttributes() {
     return HoverVideoPlayer._observedAttributes;
   }
 
   // Property which maps to the value of the "restart-on-pause" attribute
+  // Determines whether the video should reset to the beginning when it is paused
+  // after the user stops hovering
   private _restartOnPause: boolean = false;
   public set restartOnPause(newValue: boolean) {
-    // Setter updates the restart-on-pause attribute; updating the internal
-    // _restartOnPause property is handled by the attributeChangedCallback
-    if (newValue) {
-      this.setAttribute("restart-on-pause", "");
-    } else {
-      this.removeAttribute("restart-on-pause");
+    this._restartOnPause = newValue;
+
+    if (this.hasAttribute("restart-on-pause")) {
+      // If the attribute is set, update it with the new value
+      this.setAttribute("restart-on-pause", newValue.toString());
     }
   }
   public get restartOnPause() {
@@ -32,18 +34,33 @@ export default class HoverVideoPlayer extends HTMLElement {
   }
 
   // Property which maps to the value of the "unload-on-pause" attribute
+  // Determines whether the video's source(s) should be unloaded when the video is paused
   private _unloadOnPause: boolean = false;
   public set unloadOnPause(newValue: boolean) {
-    // Setter updates the unload-on-pause attribute; updating the internal
-    // _unloadOnPause property is handled by the attributeChangedCallback
-    if (newValue) {
-      this.setAttribute("unload-on-pause", "");
-    } else {
-      this.removeAttribute("unload-on-pause");
+    this._unloadOnPause = newValue;
+
+    if (this.hasAttribute("unload-on-pause")) {
+      // If the attribute is set, update it with the new value;
+      this.setAttribute("unload-on-pause", newValue.toString());
     }
   }
   public get unloadOnPause() {
     return this._unloadOnPause;
+  }
+
+  // Property which maps to the value of the "playback-start-delay" attribute
+  // Determines whether/how long the video should wait before starting playback
+  // after the user starts hovering
+  private _playbackStartDelay: number = 0;
+  public set playbackStartDelay(newValue: number) {
+    this._playbackStartDelay = newValue;
+
+    if (this.hasAttribute("playback-start-delay")) {
+      this.setAttribute("playback-start-delay", newValue.toString());
+    }
+  }
+  public get playbackStartDelay() {
+    return this._playbackStartDelay;
   }
 
   // The video element which this player component is controling
@@ -79,6 +96,23 @@ export default class HoverVideoPlayer extends HTMLElement {
   // Whether this component has a paused overlay; this will determine whether we should
   // delay pausing the video to ensure the overlay has time to finish fading in.
   private _hasPausedOverlay: boolean = false;
+
+  // Regex to test if a string is a time string in seconds (ie, "1.5s")
+  private static _secondsTimeStringRegex = /[0-9]+(\.[0-9]+)?s/;
+
+  /**
+   * Extracts a time in milliseconds from a string which can be in the format
+   * of a number of seconds (ie, "1.5s") or a number of milliseconds (ie, "1500ms", "500").
+   * 
+   * @param {string} timeString
+   */
+  private static _getMillisecondsFromTimeString(timeString: string): number {
+    if (HoverVideoPlayer._secondsTimeStringRegex.test(timeString)) {
+      return parseFloat(timeString) * 1000;
+    } else {
+      return parseInt(timeString, 10);
+    }
+  }
 
   private static _initializeTemplate() {
     // Don't do anything if the template is already initialized
@@ -143,13 +177,7 @@ export default class HoverVideoPlayer extends HTMLElement {
 
     this.shadowRoot?.addEventListener("slotchange", this._onSlotChange);
 
-    const hoverTargetSelectorAttribute = this.getAttribute("hover-target");
-    if (hoverTargetSelectorAttribute) {
-      // If an initial hover-target selector attribute is set,
-      // get the element for that selector and use it as the hover target
-      this._setHoverTargetForSelector(this.getAttribute("hover-target"));
-    } else {
-      // Otherwise, make sure we set up event listeners for the default hover target
+    if (!this.hasAttribute("hover-target")) {
       this._addHoverTargetListeners(this._hoverTarget);
     }
 
@@ -167,6 +195,8 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Lifecycle method that fires when the component is disconnected from the DOM.
    */
   disconnectedCallback() {
+    this._cleanupTimeoutIDs();
+
     this.removeEventListener("slotchange", this._onSlotChange);
     this._removeHoverTargetListeners(this._hoverTarget);
     window.removeEventListener("touchstart", this._onTouchOutsideOfHoverTarget);
@@ -193,6 +223,9 @@ export default class HoverVideoPlayer extends HTMLElement {
       case "unload-on-pause":
         this._unloadOnPause = typeof newValue === "string" ? newValue !== "false" : false;
         break;
+      case "playback-start-delay":
+        this._playbackStartDelay = newValue ? HoverVideoPlayer._getMillisecondsFromTimeString(newValue) : 0;
+        break;
       default:
     }
   }
@@ -217,10 +250,12 @@ export default class HoverVideoPlayer extends HTMLElement {
    */
   private _onHoverStart() {
     if (!this.isHovering) {
-      this._updateIsHovering(true);
-      this._startPlayback();
+      this._cleanupTimeoutIDs();
 
+      this._updateIsHovering(true);
       this.dispatchEvent(new CustomEvent("hoverstart"));
+
+      this._startPlayback();
     }
   }
 
@@ -229,6 +264,8 @@ export default class HoverVideoPlayer extends HTMLElement {
    */
   private _onHoverEnd() {
     if (this.isHovering) {
+      this._cleanupTimeoutIDs();
+
       this._updateIsHovering(false);
       this._stopPlayback();
 
@@ -292,6 +329,12 @@ export default class HoverVideoPlayer extends HTMLElement {
   }
 
   private _pauseTimeoutID: number | undefined;
+  private _playbackStartTimeoutID: number | undefined;
+
+  private _cleanupTimeoutIDs() {
+    window.clearTimeout(this._pauseTimeoutID);
+    window.clearTimeout(this._playbackStartTimeoutID);
+  }
 
   /**
    * Starts video playback and updates the component's
@@ -301,48 +344,49 @@ export default class HoverVideoPlayer extends HTMLElement {
     const video = this.video;
     if (!video) return;
 
-    window.clearTimeout(this._pauseTimeoutID);
-
     this._updatePlaybackState("loading");
 
-    video.play().then(() => {
-      this._updatePlaybackState("playing");
-    }).catch((error: DOMException) => {
-      this._updatePlaybackState("paused");
+    this._playbackStartTimeoutID = window.setTimeout(() => {
 
-      if (
-        // If this was an abort error because the playback promise was interrupted by a load/pause call,
-        // let's just ignore it; these errors are perfectly fine and happen frequently in normal usage.
-        error.name === 'AbortError'
-      ) {
-        return;
-      }
+      video.play().then(() => {
+        this._updatePlaybackState("playing");
+      }).catch((error: DOMException) => {
+        this._updatePlaybackState("paused");
+
+        if (
+          // If this was an abort error because the playback promise was interrupted by a load/pause call,
+          // let's just ignore it; these errors are perfectly fine and happen frequently in normal usage.
+          error.name === 'AbortError'
+        ) {
+          return;
+        }
 
 
-      // Additional handling for when browsers block playback for unmuted videos.
-      // This is unfortunately necessary because most modern browsers do not allow playing videos with audio
-      //  until the user has "interacted" with the page by clicking somewhere at least once; mouseenter events
-      //  don't count.
-      // If the video isn't muted and playback failed with a `NotAllowedError`, this means the browser blocked
-      // playing the video because the user hasn't clicked anywhere on the page yet.
-      if (!video.muted && error.name === 'NotAllowedError') {
-        console.warn(
-          'hover-video-player: Playback with sound was blocked by the browser. Attempting to play again with the video muted; audio will be restored if the user clicks on the page.'
-        );
-        // Mute the video and attempt to play again
-        video.muted = true;
-        this._startPlayback();
+        // Additional handling for when browsers block playback for unmuted videos.
+        // This is unfortunately necessary because most modern browsers do not allow playing videos with audio
+        //  until the user has "interacted" with the page by clicking somewhere at least once; mouseenter events
+        //  don't count.
+        // If the video isn't muted and playback failed with a `NotAllowedError`, this means the browser blocked
+        // playing the video because the user hasn't clicked anywhere on the page yet.
+        if (!video.muted && error.name === 'NotAllowedError') {
+          console.warn(
+            'hover-video-player: Playback with sound was blocked by the browser. Attempting to play again with the video muted; audio will be restored if the user clicks on the page.'
+          );
+          // Mute the video and attempt to play again
+          video.muted = true;
+          video.play();
 
-        // When the user clicks on the document, unmute the video since we should now
-        // be free to play audio
-        document.addEventListener('click', () => {
-          video.muted = false;
-        }, { once: true });
-      } else {
-        // Log any other playback errors with console.error
-        console.error(`hover-video-player: ${error.message}`);
-      }
-    });
+          // When the user clicks on the document, unmute the video since we should now
+          // be free to play audio
+          document.addEventListener('click', () => {
+            video.muted = false;
+          }, { once: true });
+        } else {
+          // Log any other playback errors with console.error
+          console.error(`hover-video-player: ${error.message}`);
+        }
+      });
+    }, this._playbackStartDelay || 0);
   }
 
   /**
@@ -354,19 +398,13 @@ export default class HoverVideoPlayer extends HTMLElement {
   private _stopPlayback() {
     if (!this.video) return;
 
-    window.clearTimeout(this._pauseTimeoutID);
-
     this._updatePlaybackState("paused");
 
     let overlayTransitionDuration = 0;
 
     if (this._hasPausedOverlay) {
       const transitionDurationCSSVarValue = getComputedStyle(this).getPropertyValue("--overlay-transition-duration");
-      if (transitionDurationCSSVarValue.endsWith("ms")) {
-        overlayTransitionDuration = parseFloat(transitionDurationCSSVarValue);
-      } else {
-        overlayTransitionDuration = parseFloat(transitionDurationCSSVarValue) * 1000;
-      }
+      overlayTransitionDuration = HoverVideoPlayer._getMillisecondsFromTimeString(transitionDurationCSSVarValue);
     }
 
     // Set a timeout to make sure we don't pause the video before the paused overlay transition

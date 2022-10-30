@@ -39,6 +39,6 @@ test("restartOnPause causes the video to reset to the beginning when paused", as
         _hoverVideoPlayer.restartOnPause = true;
     });
 
-    await expect(hoverVideoPlayer).toHaveAttribute("restart-on-pause", "");
+    await expect(hoverVideoPlayer).toHaveAttribute("restart-on-pause", "true");
     await expect(hoverVideoPlayer).toHaveJSProperty("restartOnPause", true);
 });
