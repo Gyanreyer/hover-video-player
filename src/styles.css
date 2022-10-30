@@ -21,23 +21,13 @@
 
 /* Style videos and overlays to cover the container depending on the sizing mode */
 /* The video element should expand to cover the container in all but the "video" sizing mode */
-:host(
-      :is(
-        [sizing-mode="overlay"],
-        [sizing-mode="container"],
-      )
-    ) ::slotted(video),
-    /* The paused overlay should expand to cover the container in all but the "overlay" sizing mode */
-    :host(:is([sizing-mode="video"], [sizing-mode="container"])) ::slotted([slot="paused-overlay"]),
-    /* The loading and hover overlays should always expand to cover the container */
-    ::slotted(:is([slot="loading-overlay"], [slot="hover-overlay"])) {
+:host(:is([sizing-mode="overlay"], [sizing-mode="container"])) ::slotted(video),
+/* The paused overlay should expand to cover the container in all but the "overlay" sizing mode */
+:host(:is([sizing-mode="video"], [sizing-mode="container"])) ::slotted([slot="paused-overlay"]),
+/* The loading and hover overlays should always expand to cover the container */
+::slotted(:is([slot="loading-overlay"], [slot="hover-overlay"])) {
   position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  inset: 0;
 }
 
 ::slotted(:is([slot="paused-overlay"], [slot="loading-overlay"], [slot="hover-overlay"])) {

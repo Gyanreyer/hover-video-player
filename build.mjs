@@ -72,7 +72,7 @@ await Promise.all([
   // iife build for browsers
   esbuild.build({
     ...sharedOptions,
-    outfile: `${outputDir}/index.js`,
+    outfile: `${outputDir}/index.client.js`,
     format: "iife",
   }),
 ]);
