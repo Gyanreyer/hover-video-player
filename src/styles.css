@@ -27,6 +27,8 @@
 /* The loading and hover overlays should always expand to cover the container */
 ::slotted(:is([slot="loading-overlay"], [slot="hover-overlay"])) {
   position: absolute;
+  width: 100%;
+  height: 100%;
   inset: 0;
 }
 
