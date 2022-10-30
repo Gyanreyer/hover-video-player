@@ -6,7 +6,7 @@ This is particularly useful for the common user experience pattern where a page 
 
 This is a port of the [react-hover-video-player library](https://github.com/Gyanreyer/react-hover-video-player) which should be broadly compatible with Svelte, Vue, vanilla HTML, or anything other library/framework which supports web components!
 
-**Play with a real working example on CodeSandbox.**
+**[Play with a real working example on CodeSandbox.](https://codesandbox.io/s/hover-video-player-example-pcw27m?file=/index.html)**
 
 ## Features
 

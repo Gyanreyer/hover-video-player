@@ -1,7 +1,10 @@
 {
   "name": "hover-video-player",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "A web component for rendering videos that play on hover, including support for mouse and touch events and a simple API for adding thumbnails and loading states.",
+  "files": [
+    "dist"
+  ],
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "browser": "dist/index.client.js",
