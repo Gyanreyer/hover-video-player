@@ -4,7 +4,7 @@ A web component which helps make it easy to set up videos which play when the us
 
 This is particularly useful for the common user experience pattern where a page may have a thumbnail which plays a video preview when the user hovers over it.
 
-This is a port of the [react-hover-video-player library](https://github.com/Gyanreyer/react-hover-video-player) which should be broadly compatible with Svelte, Vue, vanilla HTML, or anything other library/framework which supports web components!
+This is a port of the [react-hover-video-player library](https://github.com/Gyanreyer/react-hover-video-player) which should be broadly compatible with Svelte, Vue, vanilla HTML, or any other library/framework which supports web components!
 
 **[Play with a real working example on CodeSandbox.](https://codesandbox.io/s/hover-video-player-example-pcw27m?file=/index.html)**
 
@@ -46,11 +46,11 @@ All you need to do is import this library into your site/app and it will registe
             object-fit: cover;
         }
       </style>
-      <script type="module" src="https://unpkg.com/hover-video-player" />
+      <script type="module" src="https://unpkg.com/hover-video-player"></script>
     </head>
     <body>
       <hover-video-player>
-        <video src="path/to/video.mp4" muted loop />
+        <video src="path/to/video.mp4" muted loop></video>
         <img
           src="path/to/thumbnail.jpg"
           slot="paused-overlay"
