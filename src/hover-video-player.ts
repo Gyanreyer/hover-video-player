@@ -545,7 +545,11 @@ export default class HoverVideoPlayer extends HTMLElement {
 
 }
 
-customElements.define("hover-video-player", HoverVideoPlayer);
+if (!customElements.get('hover-video-player')) {
+  // Only define the element if it isn't already defined; this can happen due to
+  // HMR keeping the browser state the same but re-loading and re-running this script
+  customElements.define("hover-video-player", HoverVideoPlayer);
+}
 
 declare global {
   interface HTMLElementTagNameMap {

@@ -1,6 +1,6 @@
 # hover-video-player
 
-A web component which helps make it easy to set up videos which play when the user hovers over them.
+A web component that helps make it easy to set up videos which play when the user hovers over them.
 
 This is particularly useful for the common user experience pattern where a page may have a thumbnail which plays a video preview when the user hovers over it.
 
@@ -14,25 +14,23 @@ This is a port of the [react-hover-video-player library](https://github.com/Gyan
 - Built-in support for thumbnails and loading states
 - Adds handling for weird edge cases that can arise when managing video playback, such as gracefully falling back to playing the video without sound if the browser's autoplay policy blocks un-muted playback
 
-## Get started
+## Installation
 
-### Installation
-
-#### package managers
+### package managers
 
 - `npm install hover-video-player`
 - `yarn add hover-video-player`
 
-#### cdn
+### cdn
 
 - esm build (recommended): `<script type="module" src="https://unpkg.com/hover-video-player" />`
 - iife build: `<script src="https://unpkg.com/hover-video-player/dist/index.client.js" />`
 
-### Usage
+## Usage
 
 All you need to do is import this library into your site/app and it will register a `hover-video-player` custom element which you can now use.
 
-#### Examples
+### Examples
 
 <details open>
   <summary>Vanilla HTML</summary>
@@ -42,8 +40,14 @@ All you need to do is import this library into your site/app and it will registe
   <html>
     <head>
       <style>
-        hover-video-player::slot(paused-overlay) {
-            object-fit: cover;
+        hover-video-player:not(:defined) {
+          /* Hide the hover-video-player element until the component is loaded and defined
+              so we can avoid getting a flash of unstyled content */
+          display: none;
+        }
+
+        hover-video-player img[slot="paused-overlay"] {
+          object-fit: cover;
         }
       </style>
       <script type="module" src="https://unpkg.com/hover-video-player"></script>
@@ -81,7 +85,13 @@ All you need to do is import this library into your site/app and it will registe
   </hover-video-player>
 
   <style>
-    hover-video-player::slot(paused-overlay) {
+    hover-video-player:not(:defined) {
+      /* Hide the hover-video-player element until the component is loaded and defined
+          so we can avoid getting a flash of unstyled content */
+      display: none;
+    }
+
+    hover-video-player img[slot="paused-overlay"] {
       object-fit: cover;
     }
   </style>
@@ -113,7 +123,13 @@ All you need to do is import this library into your site/app and it will registe
   </template>
 
   <style>
-    hover-video-player::slot(paused-overlay) {
+    hover-video-player:not(:defined) {
+      /* Hide the hover-video-player element until the component is loaded and defined
+          so we can avoid getting a flash of unstyled content */
+      display: none;
+    }
+
+    hover-video-player img[slot="paused-overlay"] {
       object-fit: cover;
     }
   </style>
@@ -121,16 +137,16 @@ All you need to do is import this library into your site/app and it will registe
 
 </details>
 
-#### Slots
+### Slots
 
 Custom elements accept slots which can then be displayed as children of the component. `hover-video-player` has 4 slots:
 
-- **Default slot** (REQUIRED): The default unnamed slot requires a video element which the component will control. This provides a lot of flexibility so that you can configure the video however you see fit.
+- **Default slot** (REQUIRED): The default unnamed slot requires a [video element](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement) which the component will control. This provides a lot of flexibility so that you can configure the video however you see fit.
 
   ```html
   <hover-video-player>
     <!-- A video element is required for the component's default slot -->
-    <video src="/path/to/video.mp4" />
+    <video src="/path/to/video.mp4" loop muted preload="metadata" />
   </hover-video-player>
   ```
 
@@ -183,9 +199,9 @@ Custom elements accept slots which can then be displayed as children of the comp
   </hover-video-player>
   ```
 
-##### Overlay customization
+#### Overlay customization
 
-###### Overlay transition durations
+##### Overlay transition durations
 
 The time it takes for the component's overlays to fade in/out is dictated by the `--overlay-transition-duration` CSS variable. By default, its value is `0.4s`.
 
@@ -202,7 +218,7 @@ You may set it on the root `hover-video-player` element's level to set the trans
 
   hover-video-player img[slot="paused-overlay"] {
     /* The paused overlay img element should take 1.5s to fade in and out */
-    --overlay-transition-duration: 1.5s; 
+    --overlay-transition-duration: 1.5s;
   }
 </style>
 
@@ -233,13 +249,13 @@ If you wish, you may customize this timeout duration by setting your own value f
 </hover-video-player>
 ```
 
-#### Element Attributes
+### Element API
 
-##### hover-target
+#### hover-target
 
 The optional `"hover-target"` attribute can be used to provide a selector string for a custom element which the component should watch for hover interactions. If a hover target is not set, the component will use its root element as the hover target.
 
-The component's hover target can also be set in JS with the [hoverTarget](#hovertarget) property.
+The component's hover target can also be accessed and updated in JS with the `hoverTarget` property.
 
 ```html
 <div id="hover-on-me">Hover on me to start playing!</div>
@@ -248,11 +264,18 @@ The component's hover target can also be set in JS with the [hoverTarget](#hover
 </hover-video-player>
 ```
 
-##### restart-on-pause
+Setting with JS:
+
+```js
+const player = document.querySelector("hover-video-player");
+player.hoverTarget = document.getElementById("#hover-on-me");
+```
+
+#### restart-on-pause
 
 The optional boolean `"restart-on-pause"` attribute will cause the component to reset the video to the beginning when the user ends their hover interaction. Otherwise, the video will remain at whatever time it was at when the user stopped hovering, and start from there if they hover to play it again.
 
-This can also be toggled on and off in JS with the [restartOnPause](#restartonpause) property.
+This can also be accessed and updated in JS with the `restartOnPause` property.
 
 ```html
 <hover-video-player restart-on-pause>
@@ -260,7 +283,14 @@ This can also be toggled on and off in JS with the [restartOnPause](#restartonpa
 </hover-video-player>
 ```
 
-##### sizing-mode
+Setting with JS:
+
+```js
+const player = document.querySelector("hover-video-player");
+player.restartOnPause = true;
+```
+
+#### sizing-mode
 
 The optional `"sizing-mode"` attribute has no effects on the component's behavior, but it provides a set of helpful style presets which can be applied to the player.
 
@@ -286,7 +316,7 @@ Valid sizing mode options are:
 </hover-video-player>
 ```
 
-##### playback-start-delay
+#### playback-start-delay
 
 The optional `"playback-start-delay"` attribute can be used to apply a delay between when the user starts hovering and when the video starts playing.
 
@@ -294,7 +324,7 @@ This can be useful as an optimization if you have a page with a large number of 
 
 This attribute accepts times in the format of seconds like "0.5s", or milliseconds like "100ms" or simply "100".
 
-This can also be set in JS with the [playbackStartDelay](#playbackstartdelay) property.
+This can also be acessed and updated in JS with the `playbackStartDelay` property.
 
 ```html
 <hover-video-player playback-start-delay="100">
@@ -302,7 +332,14 @@ This can also be set in JS with the [playbackStartDelay](#playbackstartdelay) pr
 </hover-video-player>
 ```
 
-##### unload-on-pause
+Setting with JS:
+
+```js
+const player = document.querySelector("hover-video-player");
+player.playbackStartDelay = 500;
+```
+
+#### unload-on-pause
 
 `hover-video-player` accepts an optional boolean `"unload-on-pause"` attribute which, if present, will cause the component to fully unload the video's sources when the video is not playing in an effort to reduce the amount of memory and network usage on the page.
 
@@ -318,6 +355,8 @@ Additionally, the video may not show a thumbnail/first frame, or if it does, it 
 
 This setting must be paired with setting either `preload="metadata"` or `preload="none"` on the video element to make sure that the browser does not try to preload every video asset while it isn't playing. If a `preload` attribute is not set on the video, the component will set `preload="metadata"` on it automatically.
 
+This can also be accessed and updated in JS with the `unloadOnPause` property.
+
 ```html
 <hover-video-player unload-on-pause sizing-mode="overlay">
   <video src="video.mp4" preload="none" />
@@ -325,38 +364,7 @@ This setting must be paired with setting either `preload="metadata"` or `preload
 </hover-video-player>
 ```
 
-#### JavaScript Properties
-
-##### hoverTarget
-
-The `hoverTarget` property allows you to get/set the component's [hover target element](#hover-target) directly via JavaScript.
-
-```js
-const player = document.querySelector("hover-video-player");
-player.hoverTarget = document.getElementById("#hover-on-me");
-```
-
-##### restartOnPause
-
-The `restartOnPause` property allows you to toggle whether the component should [restart on pause](#restart-on-pause) directly via JavaScript.
-
-```js
-const player = document.querySelector("hover-video-player");
-player.restartOnPause = true;
-```
-
-##### playbackStartDelay
-
-The `playbackStartDelay` property allows you to directly set the number of milliseconds which the component should [delay playback by](#playback-start-delay) via JavaScript.
-
-```js
-const player = document.querySelector("hover-video-player");
-player.playbackStartDelay = 500;
-```
-
-##### unloadOnPause
-
-The `unloadOnPause` property allows you to toggle whether the component should [unload on pause](#unload-on-pause) directly via JavaScript.
+Setting with JS:
 
 ```js
 const player = document.querySelector("hover-video-player");
