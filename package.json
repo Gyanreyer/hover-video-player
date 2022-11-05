@@ -15,8 +15,9 @@
   "unpkg": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "serve": "web-dev-server --node-resolve --watch",
-    "build": "node build.mjs && tsc --emitDeclarationOnly",
+    "serve": "web-dev-server --node-resolve --watch --open /demo/",
+    "build": "node build.mjs",
+    "build:release": "node build.mjs --clean && tsc --emitDeclarationOnly",
     "dev": "node build.mjs --watch",
     "test": "npx playwright test"
   },

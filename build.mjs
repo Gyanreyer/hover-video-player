@@ -3,13 +3,27 @@ import fs from "fs";
 
 const outputDir = "dist";
 
-// Clean up any files in the output directory, or make sure the output directory exists
-if (fs.existsSync(outputDir)) {
-  fs.readdirSync(outputDir).forEach((file) => {
-    fs.unlinkSync(`${outputDir}/${file}`);
-  });
+const shouldClean = process.argv.includes("--clean");
+
+if (shouldClean) {
+  // Clean up any files in the output directory, or make sure the output directory exists
+  if (fs.existsSync(outputDir)) {
+    await Promise.all(
+      fs
+        .readdirSync(outputDir)
+        .map((file) => fs.promises.unlink(`${outputDir}/${file}`))
+    );
+  } else {
+    fs.mkdirSync(outputDir);
+  }
+}
+
+let buildTargets;
+const buildsArgIndex = process.argv.indexOf("--builds");
+if (buildsArgIndex < 0) {
+  buildTargets = ["all"];
 } else {
-  fs.mkdirSync(outputDir);
+  buildTargets = process.argv[buildsArgIndex + 1].split(",");
 }
 
 const shouldWatch = process.argv.includes("--watch");
@@ -56,23 +70,43 @@ const sharedOptions = {
   logLevel: "info",
 };
 
-await Promise.all([
-  // esm build
-  esbuild.build({
-    ...sharedOptions,
-    outfile: `${outputDir}/index.mjs`,
-    format: "esm",
-  }),
-  // cjs build
-  esbuild.build({
-    ...sharedOptions,
-    outfile: `${outputDir}/index.cjs`,
-    format: "cjs",
-  }),
-  // iife build for browsers
-  esbuild.build({
-    ...sharedOptions,
-    outfile: `${outputDir}/index.client.js`,
-    format: "iife",
-  }),
-]);
+const builds = [];
+
+buildTargets.forEach((buildTarget) => {
+  if (buildTarget === "esm" || buildTarget === "all") {
+    builds.push(
+      esbuild.build({
+        ...sharedOptions,
+        outfile: `${outputDir}/index.mjs`,
+        format: "esm",
+      })
+    );
+  }
+
+  if (buildTarget === "cjs" || buildTarget === "all") {
+    builds.push(
+      esbuild.build({
+        ...sharedOptions,
+        outfile: `${outputDir}/index.cjs`,
+        format: "cjs",
+      })
+    );
+  }
+
+  if (buildTarget === "iife" || buildTarget === "all") {
+    builds.push(
+      esbuild.build({
+        ...sharedOptions,
+        outfile: `${outputDir}/index.client.js`,
+        format: "iife",
+      })
+    );
+  }
+});
+
+if (builds.length === 0) {
+  console.error("No valid builds specified for the --builds arg.");
+  process.exit(1);
+}
+
+await Promise.all(builds);
