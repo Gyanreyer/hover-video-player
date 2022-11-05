@@ -54,7 +54,7 @@ All you need to do is import this library into your site/app and it will registe
     </head>
     <body>
       <hover-video-player>
-        <video src="path/to/video.mp4" muted loop></video>
+        <video src="path/to/video.mp4" muted loop playsinline></video>
         <img
           src="path/to/thumbnail.jpg"
           slot="paused-overlay"
@@ -76,7 +76,7 @@ All you need to do is import this library into your site/app and it will registe
   </script>
 
   <hover-video-player>
-    <video src="path/to/video.mp4" muted loop />
+    <video src="path/to/video.mp4" muted loop playsinline />
     <img
       src="path/to/thumbnail.jpg"
       class="paused-overlay"
@@ -113,7 +113,7 @@ All you need to do is import this library into your site/app and it will registe
 
   <template>
     <hover-video-player>
-      <video src="path/to/video.mp4" muted loop />
+      <video src="path/to/video.mp4" muted loop playsinline />
       <img
         src="path/to/thumbnail.jpg"
         class="paused-overlay"
@@ -143,10 +143,22 @@ Custom elements accept slots which can then be displayed as children of the comp
 
 - **Default slot** (REQUIRED): The default unnamed slot requires a [video element](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement) which the component will control. This provides a lot of flexibility so that you can configure the video however you see fit.
 
+  Recommended video attributes:
+  - `loop`: Makes the video loop back to the beginning and keep playing if it reaches the end
+  - `muted`: Makes sure the video will play without audio. Browsers may block playback with audio, so this can help prevent that from happening from the start
+  - `playsinline`: Makes sure that the video will be played where it is displayed on the page rather than being opened in fullscreen on iOS Safari
+  - `preload`: Makes sure that the browser doesn't attempt to aggressively pre-load the video until the user actually starts playing it. You should usually use `preload="metadata"` as this will still load basic metadata such as the video's dimensions, which can be helpful for displaying the player with the right aspect ratio
+
   ```html
   <hover-video-player>
     <!-- A video element is required for the component's default slot -->
-    <video src="/path/to/video.mp4" loop muted preload="metadata" />
+    <video
+      src="/path/to/video.mp4"
+      loop
+      muted
+      playsinline
+      preload="metadata"
+    ></video>
   </hover-video-player>
   ```
 
