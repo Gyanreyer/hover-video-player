@@ -67,6 +67,32 @@ All you need to do is import this library into your site/app and it will registe
 </details>
 
 <details>
+  <summary>WebC</summary>
+
+  ```js
+  // .eleventy.js
+  eleventyConfig.addPlugin(pluginWebc, {
+    components: [
+      "npm:hover-video-player/**/*.webc",
+    ],
+  });
+  ```
+
+  ```html
+  <!-- component.webc -->
+  <hover-video-player>
+    <video src="path/to/video.mp4" muted loop playsinline />
+    <img
+      src="path/to/thumbnail.jpg"
+      class="paused-overlay"
+      slot="paused-overlay"
+    />
+  </hover-video-player>
+  ```
+
+</details>
+
+<details>
   <summary>Svelte</summary>
 
   ```html

@@ -110,3 +110,9 @@ if (builds.length === 0) {
 }
 
 await Promise.all(builds);
+
+// Create a .webc file which just imports the built client-side script
+await fs.writeFileSync(
+  `${outputDir}/hover-video-player.webc`,
+  `<script src="./index.client.js"></script>`
+);
