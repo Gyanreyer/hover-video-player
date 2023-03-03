@@ -67,6 +67,32 @@ All you need to do is import this library into your site/app and it will registe
 </details>
 
 <details>
+  <summary>WebC</summary>
+
+  ```js
+  // .eleventy.js
+  eleventyConfig.addPlugin(pluginWebc, {
+    components: [
+      "npm:hover-video-player/**/*.webc",
+    ],
+  });
+  ```
+
+  ```html
+  <!-- component.webc -->
+  <hover-video-player>
+    <video src="path/to/video.mp4" muted loop playsinline />
+    <img
+      src="path/to/thumbnail.jpg"
+      class="paused-overlay"
+      slot="paused-overlay"
+    />
+  </hover-video-player>
+  ```
+
+</details>
+
+<details>
   <summary>Svelte</summary>
 
   ```html
@@ -381,4 +407,81 @@ Setting with JS:
 ```js
 const player = document.querySelector("hover-video-player");
 player.unloadOnPause = true;
+```
+
+### Data attributes
+
+The component sets some data attributes on its element which expose some of the component's internal state for custom styling.
+
+It is recommended that you do not tamper with these attributes by manually modifying them yourself, as the component
+will likely overwrite your changes and these attributes are used internally for the component's styling.
+
+#### data-is-hovering
+
+`data-is-hovering` is a boolean data attribute which is present when the player is hovered, meaning it is actively playing or trying to play.
+
+It will look like this in the DOM:
+
+```html
+<!-- State while the user is not hovering -->
+<hover-video-player>
+  <video src="video.mp4" />
+</hover-video-player>
+
+<!-- State when the user is hovering -->
+<hover-video-player data-is-hovering>
+  <video src="video.mp4" />
+</hover-video-player>
+```
+
+```css
+hover-video-player[data-is-hovering] {
+  /* When the player is being hovered, add custom styles to shift it up and add a box shadow */
+  transform: translateY(-5%);
+  box-shadow: 0px 0px 10px black;
+}
+```
+
+#### `data-playback-state`
+
+`data-playback-state` is an enum data attribute which represents the video's playback state. The attribute can have one of the following values:
+
+- `"paused"`: The video is paused and not attempting to play
+- `"loading"`: The video is attempting to play, but still loading
+- `"playing"`: The video is playing
+
+It will look like this in the DOM:
+
+```html
+<!-- Initial state before the component has mounted -->
+<hover-video-player>
+  <video src="video.mp4" />
+</hover-video-player>
+
+<!-- State after the component has mounted but is not playing -->
+<hover-video-player data-playback-state="paused">
+  <video src="video.mp4" />
+</hover-video-player>
+
+<!-- State when the user is hovering and the video is playing -->
+<hover-video-player data-is-hovering data-playback-state="playing">
+  <video src="video.mp4" />
+</hover-video-player>
+```
+
+```css
+hover-video-player[data-playback-state="paused"] {
+  /* Red background when the player is paused */
+  background: red;
+}
+
+hover-video-player[data-playback-state="loading"] {
+  /* Yellow background when the player is loading */
+  background: yellow;
+}
+
+hover-video-player[data-playback-state="playing"] {
+  /* Green background when the player is playing */
+  background: green;
+}
 ```
