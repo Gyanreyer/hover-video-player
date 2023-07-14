@@ -13,11 +13,11 @@
   "module": "dist/index.mjs",
   "browser": "dist/index.client.js",
   "unpkg": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "types": "dist/hover-video-player.d.ts",
   "scripts": {
     "serve": "web-dev-server --node-resolve --watch --open /demo/",
     "build": "node build.mjs",
-    "build:release": "node build.mjs --clean && tsc --emitDeclarationOnly",
+    "build:release": "node build.mjs --clean && tsc",
     "dev": "node build.mjs --watch",
     "test": "npx playwright test"
   },
