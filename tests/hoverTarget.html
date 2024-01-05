@@ -21,8 +21,8 @@
     </style>
   </head>
   <body>
-    <div id="hover-target-1"></div>
-    <div id="hover-target-2"></div>
+    <div id="hover-target-1" class="hover-target"></div>
+    <div id="hover-target-2" class="hover-target"></div>
     <hover-video-player
       hover-target="#hover-target-1"
       data-testid="has-initial-hover-target"
@@ -35,6 +35,17 @@
       ></video>
     </hover-video-player>
     <hover-video-player data-testid="no-initial-hover-target">
+      <video
+        src="/tests/assets/BigBuckBunny.mp4"
+        playsinline
+        muted
+        loop
+      ></video>
+    </hover-video-player>
+    <hover-video-player
+      hover-target=".hover-target"
+      data-testid="multiple-hover-targets"
+    >
       <video
         src="/tests/assets/BigBuckBunny.mp4"
         playsinline

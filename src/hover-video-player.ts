@@ -68,16 +68,17 @@ export default class HoverVideoPlayer extends HTMLElement {
   // The element which we will watch for hover events to start and stop video playback.
   // This maps to the element with the selector set in the "hover-target" attribute if applicable,
   // or else will just be this component's host element.
-  private _hoverTarget: Element = this;
+  private _hoverTarget: Element | Iterable<Element> = this;
   /**
    * hoverTarget setter allows you to change the hover target element programmatically if you don't
    * want to deal with the `hover-target` selector attribute.
+   * You can set a single element, a NodeList returned from querySelectorAll, or an array of elements.
    *
    * @example
    * const player = document.querySelector('hover-video-player');
-   * player.hoverTarget = document.querySelector('.my-hover-target');
+   * player.hoverTarget = document.querySelectorAll('.my-hover-target');
    */
-  public set hoverTarget(newHoverTarget: Element | null) {
+  public set hoverTarget(newHoverTarget: Element | Iterable<Element> | null) {
     // Remove any `hover-target` attribute to reduce confusion after setting the hover target programmatically
     this.removeAttribute("hover-target");
     this._setHoverTarget(newHoverTarget || this);
@@ -85,9 +86,12 @@ export default class HoverVideoPlayer extends HTMLElement {
   /**
    * hoverTarget getter returns the current hover target element that the player is using.
    */
-  public get hoverTarget(): Element {
+  public get hoverTarget(): Element | Iterable<Element> {
     return this._hoverTarget;
   }
+
+  // The element which the user is currently hovering over. Null if the user is not hovering over a target.
+  private _activeHoverTarget: Element | null = null;
 
   // Whether the user is currently hovering over the hover target.
   public isHovering: boolean = false;
@@ -178,7 +182,7 @@ export default class HoverVideoPlayer extends HTMLElement {
     this.shadowRoot?.addEventListener("slotchange", this._onSlotChange);
 
     if (!this.hasAttribute("hover-target")) {
-      this._addHoverTargetListeners(this._hoverTarget);
+      this._addHoverTargetListeners();
     }
 
     if (this.getAttribute("sizing-mode") === null) {
@@ -198,7 +202,7 @@ export default class HoverVideoPlayer extends HTMLElement {
     this._cleanupTimeoutIDs();
 
     this.removeEventListener("slotchange", this._onSlotChange);
-    this._removeHoverTargetListeners(this._hoverTarget);
+    this._removeHoverTargetListeners();
     window.removeEventListener("touchstart", this._onTouchOutsideOfHoverTarget);
   }
 
@@ -248,7 +252,8 @@ export default class HoverVideoPlayer extends HTMLElement {
   /**
    * Handler updates state and starts video playback when the user hovers over the hover target.
    */
-  private _onHoverStart() {
+  private _onHoverStart(event: Event) {
+    this._activeHoverTarget = event.currentTarget as Element;
     if (!this.isHovering) {
       this._cleanupTimeoutIDs();
 
@@ -263,6 +268,7 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Handler updates state and pauses video playback when the user stops hovering over the hover target.
    */
   private _onHoverEnd() {
+    this._activeHoverTarget = null;
     if (this.isHovering) {
       this._cleanupTimeoutIDs();
 
@@ -281,9 +287,9 @@ export default class HoverVideoPlayer extends HTMLElement {
     if (!this.isHovering) return;
 
     if (
-      !this._hoverTarget ||
+      !this._activeHoverTarget ||
       !(event.target instanceof Node) ||
-      !this._hoverTarget.contains(event.target)
+      !this._activeHoverTarget.contains(event.target)
     ) {
       this._onHoverEnd();
     }
@@ -292,14 +298,18 @@ export default class HoverVideoPlayer extends HTMLElement {
   /**
    * Hooks up event listeners to the hover target so it can start listening for hover events that will trigger playback.
    */
-  private _addHoverTargetListeners(hoverTarget: Element) {
-    hoverTarget.addEventListener("mouseenter", this._onHoverStart);
-    hoverTarget.addEventListener("mouseleave", this._onHoverEnd);
-    hoverTarget.addEventListener("focus", this._onHoverStart);
-    hoverTarget.addEventListener("blur", this._onHoverEnd);
-    hoverTarget.addEventListener("touchstart", this._onHoverStart, {
-      passive: true,
-    });
+  private _addHoverTargetListeners() {
+    const hoverTargets = Symbol.iterator in this._hoverTarget ? this._hoverTarget as Iterable<Element> : [this._hoverTarget as Element];
+
+    for (const hoverTarget of hoverTargets) {
+      hoverTarget.addEventListener("mouseenter", this._onHoverStart);
+      hoverTarget.addEventListener("mouseleave", this._onHoverEnd);
+      hoverTarget.addEventListener("focus", this._onHoverStart);
+      hoverTarget.addEventListener("blur", this._onHoverEnd);
+      hoverTarget.addEventListener("touchstart", this._onHoverStart, {
+        passive: true,
+      });
+    }
   }
 
   /**
@@ -307,8 +317,10 @@ export default class HoverVideoPlayer extends HTMLElement {
    *
    * @param {HTMLElement} hoverTarget   The hover target element to remove event listeners from.
    */
-  private _removeHoverTargetListeners(hoverTarget: Element | null) {
-    if (hoverTarget) {
+  private _removeHoverTargetListeners() {
+    const hoverTargets = Symbol.iterator in this._hoverTarget ? this._hoverTarget as Iterable<Element> : [this._hoverTarget as Element];
+
+    for (const hoverTarget of hoverTargets) {
       hoverTarget.removeEventListener("mouseenter", this._onHoverStart);
       hoverTarget.removeEventListener("mouseleave", this._onHoverEnd);
       hoverTarget.removeEventListener("focus", this._onHoverStart);
@@ -511,17 +523,17 @@ export default class HoverVideoPlayer extends HTMLElement {
   }
 
   /**
-   * Updates the componen't shover target element, cleans up event listeners on the
+   * Updates the component's hover target element, cleans up event listeners on the
    * old hover target, and sets up new listeners on the new hover target.
    *
    * @param {Element} newHoverTarget
    */
-  private _setHoverTarget(newHoverTarget: Element) {
+  private _setHoverTarget(newHoverTarget: Iterable<Element> | Element) {
     if (newHoverTarget === this._hoverTarget) return;
 
-    this._removeHoverTargetListeners(this._hoverTarget);
+    this._removeHoverTargetListeners();
     this._hoverTarget = newHoverTarget;
-    this._addHoverTargetListeners(this._hoverTarget);
+    this._addHoverTargetListeners();
   }
 
   /**
@@ -536,13 +548,14 @@ export default class HoverVideoPlayer extends HTMLElement {
       return;
     }
 
-    const hoverTarget = document.querySelector(selector);
-    if (!hoverTarget) {
+    const hoverTarget = document.querySelectorAll(selector);
+    if (hoverTarget.length === 0) {
       console.error(`hover-video-player failed to find a hover target element with the selector "${selector}".`);
+      this._setHoverTarget(this);
+    } else {
+      this._setHoverTarget(hoverTarget);
     }
-    this._setHoverTarget(hoverTarget || this);
   }
-
 }
 
 if (!customElements.get('hover-video-player')) {

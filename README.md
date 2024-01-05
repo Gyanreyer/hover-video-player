@@ -291,13 +291,24 @@ If you wish, you may customize this timeout duration by setting your own value f
 
 #### hover-target
 
-The optional `"hover-target"` attribute can be used to provide a selector string for a custom element which the component should watch for hover interactions. If a hover target is not set, the component will use its root element as the hover target.
+The optional `"hover-target"` attribute can be used to provide a selector string for element(s) which the component should watch for hover interactions. If a hover target is not set, the component will use its root element as the hover target.
+
+Note that if you provide a selector which matches multiple elements in the document, they will all be added as hover targets.
 
 The component's hover target can also be accessed and updated in JS with the `hoverTarget` property.
+This property may be a single `Element` instance, or an iterable of `Element` instances; a manually constructed array, a `NodeList` returned by `querySelectorAll`, or an HTMLCollection returned by `getElementsByClassName` are all acceptable.
 
 ```html
+<!-- A single hover target -->
 <div id="hover-on-me">Hover on me to start playing!</div>
 <hover-video-player hover-target="#hover-on-me">
+  <video src="video.mp4" />
+</hover-video-player>
+
+<!-- Multiple hover targets -->
+<div class="hover-target">You can hover on me to play</div>
+<div class="hover-target">You can also hover on me!</div>
+<hover-video-player hover-target=".hover-target">
   <video src="video.mp4" />
 </hover-video-player>
 ```
@@ -306,7 +317,11 @@ Setting with JS:
 
 ```js
 const player = document.querySelector("hover-video-player");
-player.hoverTarget = document.getElementById("#hover-on-me");
+// Setting a single hover target element
+player.hoverTarget = document.getElementById("hover-on-me");
+
+// Setting multiple hover targets
+player.hoverTarget = document.querySelectorAll(".hover-target");
 ```
 
 #### restart-on-pause

@@ -1,6 +1,6 @@
 {
   "name": "hover-video-player",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "A web component for rendering videos that play on hover, including support for mouse and touch events and a simple API for adding thumbnails and loading states.",
   "repository": {
     "type": "git",

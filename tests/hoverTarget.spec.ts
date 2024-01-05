@@ -4,7 +4,14 @@ const expectComponentHasHoverTarget = async (page: Page, componentLocator: Locat
     // The component's `hoverTarget` property should match the expected element
     expect(await page.evaluate(({
         component, expectedHoverTarget,
-    }) => (component as any).hoverTarget === expectedHoverTarget, { component: await componentLocator.elementHandle(), expectedHoverTarget: await expectedElementLocator.elementHandle() })).toBe(true);
+    }) => {
+        const hoverTarget = (component as any).hoverTarget;
+        if (Symbol.iterator in hoverTarget) {
+            return Array.from(hoverTarget).includes(expectedHoverTarget);
+        } else {
+            return hoverTarget === expectedHoverTarget;
+        }
+    }, { component: await componentLocator.elementHandle(), expectedHoverTarget: await expectedElementLocator.elementHandle() })).toBe(true);
     const video = await componentLocator.locator("video");
     // The video should be paused
     await expect(video).toHaveJSProperty("paused", true);
@@ -92,4 +99,28 @@ test("hoverTarget can be updated for a component without an initial hover target
     // Set the hoverTarget JS property to null to revert to using the component host element as the hover target
     await componentWithNoInitialHoverTarget.evaluate((componentElement: any) => { componentElement.hoverTarget = null; });
     await expectComponentHasHoverTarget(page, componentWithNoInitialHoverTarget, componentWithNoInitialHoverTarget);
+});
+
+test("Multiple hoverTargets can be set at the same time for a single component", async ({ page }) => {
+    await page.goto("/tests/hoverTarget.html");
+
+    const [componentWithMultipleHoverTargets, hoverTarget1, hoverTarget2] = await Promise.all([
+        page.locator("[data-testid='multiple-hover-targets']"),
+        page.locator("#hover-target-1"),
+        page.locator("#hover-target-2"),
+    ]);
+
+    // The component should have two hover targets at the same time
+    expect(await componentWithMultipleHoverTargets.evaluate((componentElement: any) => componentElement.hoverTarget.length)).toBe(2);
+    await expectComponentHasHoverTarget(page, componentWithMultipleHoverTargets, hoverTarget1);
+    await expectComponentHasHoverTarget(page, componentWithMultipleHoverTargets, hoverTarget2);
+
+    // Reset the component hover target to the host element
+    await componentWithMultipleHoverTargets.evaluate((componentElement: any) => { componentElement.hoverTarget = null });
+    await expectComponentHasHoverTarget(page, componentWithMultipleHoverTargets, componentWithMultipleHoverTargets);
+
+    // Programmatically set the hover target to both hoverTarget1 and hoverTarget2 (they both have a .hover-target class)
+    await componentWithMultipleHoverTargets.evaluate((componentElement: any) => { componentElement.hoverTarget = document.getElementsByClassName("hover-target"); });
+    await expectComponentHasHoverTarget(page, componentWithMultipleHoverTargets, hoverTarget1);
+    await expectComponentHasHoverTarget(page, componentWithMultipleHoverTargets, hoverTarget2);
 });
