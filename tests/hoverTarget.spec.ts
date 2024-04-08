@@ -96,6 +96,11 @@ test("hoverTarget can be updated for a component without an initial hover target
     await componentWithNoInitialHoverTarget.evaluate((componentElement: any) => { componentElement.hoverTarget = document.getElementById("hover-target-1"); });
     await expectComponentHasHoverTarget(page, componentWithNoInitialHoverTarget, hoverTarget1);
 
+    // Update the component hover target to both hoverTarget1 and hoverTarget2 by setting the hoverTarget JS property
+    await componentWithNoInitialHoverTarget.evaluate((componentElement: any) => { componentElement.hoverTarget = document.querySelectorAll(".hover-target"); });
+    await expectComponentHasHoverTarget(page, componentWithNoInitialHoverTarget, hoverTarget1);
+    await expectComponentHasHoverTarget(page, componentWithNoInitialHoverTarget, hoverTarget2);
+
     // Set the hoverTarget JS property to null to revert to using the component host element as the hover target
     await componentWithNoInitialHoverTarget.evaluate((componentElement: any) => { componentElement.hoverTarget = null; });
     await expectComponentHasHoverTarget(page, componentWithNoInitialHoverTarget, componentWithNoInitialHoverTarget);

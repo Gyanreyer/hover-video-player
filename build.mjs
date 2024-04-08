@@ -66,7 +66,6 @@ const sharedOptions = {
   sourcemap: true,
   // Mangle all internal private properties, which start with an underscore
   mangleProps: /^_.+$/,
-  watch: shouldWatch,
   logLevel: "info",
 };
 
@@ -74,32 +73,50 @@ const builds = [];
 
 buildTargets.forEach((buildTarget) => {
   if (buildTarget === "esm" || buildTarget === "all") {
+    const esmOptions = {
+      ...sharedOptions,
+      outfile: `${outputDir}/index.mjs`,
+      format: "esm",
+    };
+
     builds.push(
-      esbuild.build({
-        ...sharedOptions,
-        outfile: `${outputDir}/index.mjs`,
-        format: "esm",
-      })
+      shouldWatch
+        ? esbuild
+            .context(esmOptions)
+            .then((ctx) => ctx.watch().then(() => ctx.dispose()))
+        : esbuild.build(esmOptions)
     );
   }
 
   if (buildTarget === "cjs" || buildTarget === "all") {
+    const cjsOptions = {
+      ...sharedOptions,
+      outfile: `${outputDir}/index.cjs`,
+      format: "cjs",
+    };
+
     builds.push(
-      esbuild.build({
-        ...sharedOptions,
-        outfile: `${outputDir}/index.cjs`,
-        format: "cjs",
-      })
+      shouldWatch
+        ? esbuild
+            .context(cjsOptions)
+            .then((ctx) => ctx.watch().then(() => ctx.dispose()))
+        : esbuild.build(cjsOptions)
     );
   }
 
   if (buildTarget === "iife" || buildTarget === "all") {
+    const iifeOptions = {
+      ...sharedOptions,
+      outfile: `${outputDir}/index.js`,
+      format: "iife",
+    };
+
     builds.push(
-      esbuild.build({
-        ...sharedOptions,
-        outfile: `${outputDir}/index.client.js`,
-        format: "iife",
-      })
+      shouldWatch
+        ? esbuild
+            .context(iifeOptions)
+            .then((ctx) => ctx.watch().then(() => ctx.dispose()))
+        : esbuild.build(iifeOptions)
     );
   }
 });
