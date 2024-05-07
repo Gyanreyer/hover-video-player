@@ -377,7 +377,7 @@ This can be useful as an optimization if you have a page with a large number of 
 
 This attribute accepts times in the format of seconds like "0.5s", or milliseconds like "100ms" or simply "100".
 
-This can also be acessed and updated in JS with the `playbackStartDelay` property.
+This can also be accessed and updated in JS with the `playbackStartDelay` property.
 
 ```html
 <hover-video-player playback-start-delay="100">
@@ -402,7 +402,7 @@ Although this setting can provide some performance benefits, it also has notable
 
 The video's metadata will be (at least temporarily) fully unloaded when the video is paused, which could cause content jumps to occur when the video starts/stops playing.
 
-As a result, it is recommended that you set the ["sizing-mode"](#sizing-mode) attribute to "overlay" or "container", or provide your own custom styles to set a fixed dimensions for the component.
+As a result, it is recommended that you set the [`"sizing-mode"`](#sizing-mode) attribute to "overlay" or "container", or provide your own custom styles to set a fixed dimensions for the component.
 
 Additionally, the video may not show a thumbnail/first frame, or if it does, it may flash in ways that are undesired. As a result, it is recommended to provide overlay contents for the "paused-overlay" slot which will hide the video element while it is paused and unloaded.
 
@@ -422,6 +422,40 @@ Setting with JS:
 ```js
 const player = document.querySelector("hover-video-player");
 player.unloadOnPause = true;
+```
+
+#### controlled
+
+The optional boolean `"controlled"` attribute will disable standard event handling on the hover target so playback can be fully manually managed programmatically for more complex custom behavior.
+
+You can programmatically start and stop playback on a controlled component by using the `.hover()` and `.blur()` methods, or manipulating the [`"data-playback-state"`](#data-playback-state) attribute.
+
+This can also be accessed and updated in JS with the `controlled` property.
+
+```html
+<hover-video-player controlled>
+  <video src="video.mp4" />
+</hover-video-player>
+```
+
+Setting with JS:
+
+```js
+const player = document.querySelector("hover-video-player");
+player.controlled = true;
+```
+
+Programmatically starting/stopping playback:
+
+```js
+const player = document.querySelector("hover-video-player");
+// Start playback
+player.hover();
+// Stop playback
+player.blur();
+
+// Start playback
+player.dataset.playbackState = "playing";
 ```
 
 ### Data attributes
@@ -459,11 +493,13 @@ hover-video-player[data-is-hovering] {
 
 #### `data-playback-state`
 
-`data-playback-state` is an enum data attribute which represents the video's playback state. The attribute can have one of the following values:
+`data-playback-state` is an enum data attribute which reflects the video's internal playback state. The attribute can have one of the following values:
 
 - `"paused"`: The video is paused and not attempting to play
 - `"loading"`: The video is attempting to play, but still loading
 - `"playing"`: The video is playing
+
+If you manipulate the value of the attribute, the component will attempt to transition to that playback state.
 
 It will look like this in the DOM:
 
@@ -499,4 +535,43 @@ hover-video-player[data-playback-state="playing"] {
   /* Green background when the player is playing */
   background: green;
 }
+```
+
+The attribute can be manipulated to trigger playback state updates. This could be combined with the `controlled` attribute
+as another way to manually control playback state via JavaScript.
+
+```js
+const player = document.querySelector("hover-video-player");
+console.log(player.dataset.playbackState); // "paused"
+// The player will attempt to play; it will revert back to a "loading" state until playback succeeds
+player.dataset.playbackState = "playing";
+console.log(player.dataset.playbackState); // "loading"
+// Once the video starts playing...
+console.log(player.dataset.playbackState); // "playing"
+
+// Removing the attribute or setting it to an invalid value will reset the player to "paused" state
+player.removeAttribute("data-playback-state");
+console.log(player.dataset.playbackState); // "paused"
+```
+
+### Events
+
+#### `hoverstart`
+
+The player component will emit a custom `"hoverstart"` event when a user hovers over the player's hover target to start playback,
+or the `hover()` method is manually called.
+
+```js
+const player = document.querySelector("hover-video-player");
+player.addEventListener("hoverstart", () => console.log("The user hovered!"));
+```
+
+#### `hoverend`
+
+The player component will emit a custom `"hoverend"` event when a user stops hovering over the player's hover target to stop playback,
+or the `blur()` method is manually called.
+
+```js
+const player = document.querySelector("hover-video-player");
+player.addEventListener("hoverend", () => console.log("The user is no longer hovering!"));
 ```

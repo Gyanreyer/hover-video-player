@@ -12,7 +12,10 @@ export default class HoverVideoPlayer extends HTMLElement {
     "restart-on-pause",
     "unload-on-pause",
     "playback-start-delay",
-  ] as const
+    "controlled",
+    "data-playback-state",
+  ] as const;
+
   static get observedAttributes() {
     return HoverVideoPlayer._observedAttributes;
   }
@@ -90,13 +93,39 @@ export default class HoverVideoPlayer extends HTMLElement {
     return this._hoverTarget;
   }
 
+  /**
+   * Whether the player is being controlled by manual calls to hover() and blur() in JS instead of
+   * using hover events on the hover target element.
+   */
+  public get controlled() {
+    const controlledAttribute = this.getAttribute("controlled");
+    return controlledAttribute !== null && controlledAttribute !== "false";
+  }
+
+  /**
+   * Sets whether the player is being controlled by manual calls to hover() and blur() in JS instead of
+   * using hover events on the hover target element.
+   */
+  public set controlled(newValue: boolean) {
+    if (!newValue) {
+      this.removeAttribute("controlled");
+    } else {
+      this.setAttribute("controlled", "");
+    }
+  }
+
+  // The current playback state of the player.
+  private _playbackState: "paused" | "loading" | "playing" = "paused";
+
+  public get playbackState() {
+    return this._playbackState;
+  }
+
   // The element which the user is currently hovering over. Null if the user is not hovering over a target.
-  private _activeHoverTarget: Element | null = null;
+  private _activeHoverTarget: EventTarget | null = null;
 
   // Whether the user is currently hovering over the hover target.
   public isHovering: boolean = false;
-  // The current playback state of the player.
-  public playbackState: "paused" | "loading" | "playing" = "paused";
   // Whether this component has a paused overlay; this will determine whether we should
   // delay pausing the video to ensure the overlay has time to finish fading in.
   private _hasPausedOverlay: boolean = false;
@@ -107,7 +136,7 @@ export default class HoverVideoPlayer extends HTMLElement {
   /**
    * Extracts a time in milliseconds from a string which can be in the format
    * of a number of seconds (ie, "1.5s") or a number of milliseconds (ie, "1500ms", "500").
-   * 
+   *
    * @param {string} timeString
    */
   private static _getMillisecondsFromTimeString(timeString: string): number {
@@ -164,8 +193,8 @@ export default class HoverVideoPlayer extends HTMLElement {
     shadowRoot.appendChild(HoverVideoPlayer._templateElement.content.cloneNode(true));
 
     // Bind `this` for event handlers to make sure nothing weird happens
-    this._onHoverStart = this._onHoverStart.bind(this);
-    this._onHoverEnd = this._onHoverEnd.bind(this);
+    this.hover = this.hover.bind(this);
+    this.blur = this.blur.bind(this);
     this._onTouchOutsideOfHoverTarget =
       this._onTouchOutsideOfHoverTarget.bind(this);
     this._onSlotChange = this._onSlotChange.bind(this);
@@ -181,7 +210,7 @@ export default class HoverVideoPlayer extends HTMLElement {
 
     this.shadowRoot?.addEventListener("slotchange", this._onSlotChange);
 
-    if (!this.hasAttribute("hover-target")) {
+    if (!this.controlled && !this.hasAttribute("hover-target")) {
       this._addHoverTargetListeners();
     }
 
@@ -215,10 +244,9 @@ export default class HoverVideoPlayer extends HTMLElement {
    */
   attributeChangedCallback(name: typeof HoverVideoPlayer._observedAttributes[number], _oldValue: string | null, newValue: string | null) {
     switch (name) {
-      case "hover-target": {
+      case "hover-target":
         this._setHoverTargetForSelector(newValue);
         break;
-      }
       case "restart-on-pause":
         // If the new value for restart-on-pause is a string, the value should be considered truthy unless it's "false",
         // otherwise we'll assume it's null/undefined meaning the attribute isn't set, so the value should be false.
@@ -230,7 +258,45 @@ export default class HoverVideoPlayer extends HTMLElement {
       case "playback-start-delay":
         this._playbackStartDelay = newValue ? HoverVideoPlayer._getMillisecondsFromTimeString(newValue) : 0;
         break;
+      case "controlled":
+        if (newValue !== null && newValue !== "false") {
+          this._removeHoverTargetListeners();
+        } else {
+          this._addHoverTargetListeners();
+        }
+        break;
+      case "data-playback-state":
+        // If the data-playback-state attribute was externally manipulated
+        // and is now out of sync with the internal playback state, update the internal state
+        if (newValue !== this._playbackState) {
+          this._updatePlaybackState(newValue as typeof this._playbackState);
+        }
+        break;
       default:
+    }
+  }
+
+  private _updatePlaybackState(newPlaybackState: typeof this._playbackState) {
+    const previousPlaybackState = this._playbackState;
+
+    this._playbackState = newPlaybackState;
+    this.setAttribute("data-playback-state", newPlaybackState);
+
+    switch (newPlaybackState) {
+      case "playing":
+        if (previousPlaybackState === "paused") {
+          // We can't jump directly from "paused" to "playing"; step back to "loading" state first
+          this._updatePlaybackState("loading");
+        }
+        break;
+      case "loading":
+        this._startPlayback();
+        break;
+      case "paused":
+        this._stopPlayback();
+        break;
+      default:
+        this._updatePlaybackState("paused");
     }
   }
 
@@ -250,30 +316,32 @@ export default class HoverVideoPlayer extends HTMLElement {
   }
 
   /**
-   * Handler updates state and starts video playback when the user hovers over the hover target.
+   * Updates state and starts video playback. Triggered when the user hovers over the hover target,
+   * but can be called programmatically for controlled playback.
    */
-  private _onHoverStart(event: Event) {
-    this._activeHoverTarget = event.currentTarget as Element;
+  hover(event?: Event) {
+    this._activeHoverTarget = event?.currentTarget ?? null;
     if (!this.isHovering) {
       this._cleanupTimeoutIDs();
 
       this._updateIsHovering(true);
       this.dispatchEvent(new CustomEvent("hoverstart"));
 
-      this._startPlayback();
+      this._updatePlaybackState("loading");
     }
   }
 
   /**
-   * Handler updates state and pauses video playback when the user stops hovering over the hover target.
+   * Updates state and pauses video playback. Triggered when the user stops hovering over the hover target,
+   * but can be called programmatically for controlled playback.
    */
-  private _onHoverEnd() {
+  blur() {
     this._activeHoverTarget = null;
     if (this.isHovering) {
       this._cleanupTimeoutIDs();
 
       this._updateIsHovering(false);
-      this._stopPlayback();
+      this._updatePlaybackState("paused");
 
       this.dispatchEvent(new CustomEvent("hoverend"));
     }
@@ -287,11 +355,11 @@ export default class HoverVideoPlayer extends HTMLElement {
     if (!this.isHovering) return;
 
     if (
-      !this._activeHoverTarget ||
+      !(this._activeHoverTarget instanceof Node) ||
       !(event.target instanceof Node) ||
       !this._activeHoverTarget.contains(event.target)
     ) {
-      this._onHoverEnd();
+      this.blur();
     }
   }
 
@@ -299,14 +367,14 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Hooks up event listeners to the hover target so it can start listening for hover events that will trigger playback.
    */
   private _addHoverTargetListeners() {
-    const hoverTargets = Symbol.iterator in this._hoverTarget ? this._hoverTarget as Iterable<Element> : [this._hoverTarget as Element];
+    const hoverTargets = Symbol.iterator in this._hoverTarget ? this._hoverTarget : [this._hoverTarget];
 
     for (const hoverTarget of hoverTargets) {
-      hoverTarget.addEventListener("mouseenter", this._onHoverStart);
-      hoverTarget.addEventListener("mouseleave", this._onHoverEnd);
-      hoverTarget.addEventListener("focus", this._onHoverStart);
-      hoverTarget.addEventListener("blur", this._onHoverEnd);
-      hoverTarget.addEventListener("touchstart", this._onHoverStart, {
+      hoverTarget.addEventListener("mouseenter", this.hover);
+      hoverTarget.addEventListener("mouseleave", this.blur);
+      hoverTarget.addEventListener("focus", this.hover);
+      hoverTarget.addEventListener("blur", this.blur);
+      hoverTarget.addEventListener("touchstart", this.hover, {
         passive: true,
       });
     }
@@ -318,26 +386,15 @@ export default class HoverVideoPlayer extends HTMLElement {
    * @param {HTMLElement} hoverTarget   The hover target element to remove event listeners from.
    */
   private _removeHoverTargetListeners() {
-    const hoverTargets = Symbol.iterator in this._hoverTarget ? this._hoverTarget as Iterable<Element> : [this._hoverTarget as Element];
+    const hoverTargets = Symbol.iterator in this._hoverTarget ? this._hoverTarget : [this._hoverTarget];
 
     for (const hoverTarget of hoverTargets) {
-      hoverTarget.removeEventListener("mouseenter", this._onHoverStart);
-      hoverTarget.removeEventListener("mouseleave", this._onHoverEnd);
-      hoverTarget.removeEventListener("focus", this._onHoverStart);
-      hoverTarget.removeEventListener("blur", this._onHoverEnd);
-      hoverTarget.removeEventListener("touchstart", this._onHoverStart);
+      hoverTarget.removeEventListener("mouseenter", this.hover);
+      hoverTarget.removeEventListener("mouseleave", this.blur);
+      hoverTarget.removeEventListener("focus", this.hover);
+      hoverTarget.removeEventListener("blur", this.blur);
+      hoverTarget.removeEventListener("touchstart", this.hover);
     }
-  }
-
-  /**
-   * Updates the internal playback state and updates the component's data-playback-state attribute
-   * to ensure the styles are updated correctly.
-   *
-   * @param {PlaybackState} newPlaybackState
-   */
-  private _updatePlaybackState(newPlaybackState: typeof this.playbackState) {
-    this.playbackState = newPlaybackState;
-    this.setAttribute("data-playback-state", newPlaybackState);
   }
 
   private _pauseTimeoutID: number | undefined;
@@ -356,15 +413,13 @@ export default class HoverVideoPlayer extends HTMLElement {
     const video = this.video;
     if (!video) return;
 
-    this._updatePlaybackState("loading");
+    // Cancel any existing playback start timeout
+    window.clearTimeout(this._playbackStartTimeoutID);
 
     this._playbackStartTimeoutID = window.setTimeout(() => {
-
       video.play().then(() => {
         this._updatePlaybackState("playing");
       }).catch((error: DOMException) => {
-        this._updatePlaybackState("paused");
-
         if (
           // If this was an abort error because the playback promise was interrupted by a load/pause call,
           // let's just ignore it; these errors are perfectly fine and happen frequently in normal usage.
@@ -372,7 +427,6 @@ export default class HoverVideoPlayer extends HTMLElement {
         ) {
           return;
         }
-
 
         // Additional handling for when browsers block playback for unmuted videos.
         // This is unfortunately necessary because most modern browsers do not allow playing videos with audio
@@ -396,6 +450,7 @@ export default class HoverVideoPlayer extends HTMLElement {
         } else {
           // Log any other playback errors with console.error
           console.error(`hover-video-player: ${error.message}`);
+          this._updatePlaybackState("paused");
         }
       });
     }, this._playbackStartDelay || 0);
@@ -408,9 +463,8 @@ export default class HoverVideoPlayer extends HTMLElement {
    * If `unloadOnPause` is true, the video's sources will be unloaded.
    */
   private _stopPlayback() {
-    if (!this.video) return;
-
-    this._updatePlaybackState("paused");
+    const videoElement = this.video;
+    if (!videoElement) return;
 
     let overlayTransitionDuration = 0;
 
@@ -422,13 +476,13 @@ export default class HoverVideoPlayer extends HTMLElement {
     // Set a timeout to make sure we don't pause the video before the paused overlay transition
     // has had time to finish (if there is no paused overlay, the timeout will be 0)
     this._pauseTimeoutID = window.setTimeout(() => {
-      if (!this.video) return;
+      if (!videoElement) return;
 
-      this.video.pause();
+      videoElement.pause();
 
       // If the video should restart when paused, reset the video's time to 0
       if (this.restartOnPause) {
-        this.video.currentTime = 0;
+        videoElement.currentTime = 0;
       }
 
       // If the video's sources should be unloaded after pausing,
@@ -437,14 +491,14 @@ export default class HoverVideoPlayer extends HTMLElement {
       // load and play them again when the user hovers over the player again.
       if (this.unloadOnPause) {
         // Hang onto the current time the video is at so we can restore to there after unloading
-        const currentTime = this.video.currentTime;
+        const currentTime = videoElement.currentTime;
 
         // If there's an `src` attribute on the video, we'll temporarily remove it
-        const previousSrcAttribute = this.video.getAttribute("src");
-        this.video.removeAttribute("src");
+        const previousSrcAttribute = videoElement.getAttribute("src");
+        videoElement.removeAttribute("src");
 
         // We should also grab all <source> elements in the video and remove them
-        const sourceElements = this.video.querySelectorAll("source");
+        const sourceElements = videoElement.querySelectorAll("source");
         const sourceElementCount = sourceElements.length;
         for (let i = 0; i < sourceElementCount; ++i) {
           sourceElements[i].remove();
@@ -452,23 +506,22 @@ export default class HoverVideoPlayer extends HTMLElement {
 
         // Wait until the video's sources are successfully emptied before restoring the sources
         // to make sure things really do get fully unloaded.
-        this.video.addEventListener("emptied", (event) => {
-          const video = event.target as HTMLVideoElement;
+        videoElement.addEventListener("emptied", () => {
           // Restore the `src` attribute and/or source elements
           if (previousSrcAttribute) {
-            video.src = previousSrcAttribute;
+            videoElement.src = previousSrcAttribute;
           }
           for (let i = 0; i < sourceElementCount; ++i) {
-            video.appendChild(sourceElements[i]);
+            videoElement.appendChild(sourceElements[i]);
           }
 
-          video.currentTime = currentTime;
+          videoElement.currentTime = currentTime;
         }, {
           once: true,
         });
 
         // Re-load the video with the sources removed so we unload everything from memory
-        this.video.load();
+        videoElement.load();
 
       }
     }, overlayTransitionDuration);
@@ -480,16 +533,16 @@ export default class HoverVideoPlayer extends HTMLElement {
   private _onDefaultSlotChange(target: HTMLSlotElement) {
     const defaultSlotNodes = target.assignedNodes({ flatten: true });
 
-    const videoElement = defaultSlotNodes.find((node) => node instanceof HTMLVideoElement) as HTMLVideoElement | undefined;
+    const videoElement = defaultSlotNodes.find((node): node is HTMLVideoElement => node instanceof HTMLVideoElement);
     if (videoElement) {
-      this.video = videoElement;
-
-      if (this.unloadOnPause && (!this.video.preload || this.video.preload === "auto")) {
+      if (this.unloadOnPause && (!videoElement.preload || videoElement.preload === "auto")) {
         // If the unloadOnPause property is set and the video's preload property is set to "auto",
         // we need to change it to "metadata"; otherwise, the browser will start pre-loading the entire
         // video and defeat the whole purpose of unloading the video when it's paused.
-        this.video.preload = "metadata";
+        videoElement.preload = "metadata";
       }
+
+      this.video = videoElement;
     } else {
       console.error("hover-video-player failed to find a video element in the default slot.");
     }
@@ -508,7 +561,10 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Handles changes to this component's slots.
    */
   private _onSlotChange(event: Event) {
-    const target = event?.target as HTMLSlotElement;
+    const target = event.target;
+    if (!(target instanceof HTMLSlotElement)) {
+      return;
+    }
 
     switch (target.name) {
       case "paused-overlay":
@@ -533,7 +589,9 @@ export default class HoverVideoPlayer extends HTMLElement {
 
     this._removeHoverTargetListeners();
     this._hoverTarget = newHoverTarget;
-    this._addHoverTargetListeners();
+    if (!this.controlled) {
+      this._addHoverTargetListeners();
+    }
   }
 
   /**
