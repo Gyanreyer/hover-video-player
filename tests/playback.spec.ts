@@ -1,15 +1,25 @@
 import { test, expect } from '@playwright/test';
+import type HoverVideoPlayer from '../src/hover-video-player';
 
-test('hover-video-player component starts and stops playback as expected when the user hovers', async ({ page, isMobile }) => {
-  await page.route("**/*.mp4", (route) => new Promise((resolve) => {
+test('hover-video-player component starts and stops playback as expected when the user hovers', async ({ context, page, isMobile }) => {
+  await context.route("**/*.mp4", (route) => new Promise((resolve) => {
     // Add a .25 second delay before resolving the request for the video asset so we can
     // test that the player enters a loading state while waiting for the video to load.
-    setTimeout(() => resolve(route.continue()), 250);
+    setTimeout(() => {
+      resolve(route.continue());
+    }, 250);
   }));
   await page.goto('/tests/playback.html');
 
   const hoverVideoPlayer = await page.locator("hover-video-player");
   const video = await page.locator("hover-video-player video");
+
+  await hoverVideoPlayer.evaluateHandle((el: HoverVideoPlayer) => el.addEventListener("playbackstatechange", (evt) => {
+    (window as any).playbackstatechangeCalls ??= [];
+    if (evt instanceof CustomEvent) {
+      (window as any).playbackstatechangeCalls.push(evt.detail);
+    }
+  }));
 
   // The component's initial state should all be as expected; the user is not hovering and the video is not playing
   await Promise.all([
@@ -51,5 +61,13 @@ test('hover-video-player component starts and stops playback as expected when th
     expect(video).toHaveJSProperty("paused", true),
     expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", ""),
     expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "paused"),
+  ]);
+
+  const playbackStateChangeCalls = await page.evaluate(() => (window as any).playbackstatechangeCalls);
+
+  await expect(playbackStateChangeCalls).toEqual([
+    "loading",
+    "playing",
+    "paused",
   ]);
 });
