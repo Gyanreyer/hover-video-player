@@ -193,8 +193,8 @@ export default class HoverVideoPlayer extends HTMLElement {
     shadowRoot.appendChild(HoverVideoPlayer._templateElement.content.cloneNode(true));
 
     // Bind `this` for event handlers to make sure nothing weird happens
-    this.hover = this.hover.bind(this);
-    this.blur = this.blur.bind(this);
+    this._onHover = this._onHover.bind(this);
+    this._onBlur = this._onBlur.bind(this);
     this._onTouchOutsideOfHoverTarget =
       this._onTouchOutsideOfHoverTarget.bind(this);
     this._onSlotChange = this._onSlotChange.bind(this);
@@ -205,8 +205,10 @@ export default class HoverVideoPlayer extends HTMLElement {
    * where we can get/set attributes on the component.
    */
   connectedCallback() {
-    // The player is initially in a paused state
-    this._updatePlaybackState("paused");
+    // Ensure the element has a data-playback-state attr
+    if (!this.hasAttribute("data-playback-state")) {
+      this.setAttribute("data-playback-state", this.playbackState);
+    }
 
     this.shadowRoot?.addEventListener("slotchange", this._onSlotChange);
 
@@ -214,7 +216,7 @@ export default class HoverVideoPlayer extends HTMLElement {
       this._addHoverTargetListeners();
     }
 
-    if (this.getAttribute("sizing-mode") === null) {
+    if (!this.hasAttribute("sizing-mode")) {
       // If no sizing-mode is set, default to "video"
       this.setAttribute("sizing-mode", "video");
     }
@@ -277,18 +279,23 @@ export default class HoverVideoPlayer extends HTMLElement {
   }
 
   private _updatePlaybackState(newPlaybackState: typeof this._playbackState) {
-    const previousPlaybackState = this._playbackState;
+    if (this._playbackState === newPlaybackState) return;
+
+    if (newPlaybackState !== "loading" && newPlaybackState !== "playing" && newPlaybackState !== "paused") {
+      // If the new playback state is invalid, default to "paused"
+      newPlaybackState = "paused";
+    } else if (this._playbackState === "paused" && newPlaybackState === "playing") {
+      // We can't jump directly from "paused" to "playing"; step back to "loading" state first
+      newPlaybackState = "loading";
+    }
 
     this._playbackState = newPlaybackState;
     this.setAttribute("data-playback-state", newPlaybackState);
+    this.dispatchEvent(new CustomEvent("playbackstatechange", {
+      detail: newPlaybackState,
+    }));
 
     switch (newPlaybackState) {
-      case "playing":
-        if (previousPlaybackState === "paused") {
-          // We can't jump directly from "paused" to "playing"; step back to "loading" state first
-          this._updatePlaybackState("loading");
-        }
-        break;
       case "loading":
         this._startPlayback();
         break;
@@ -296,7 +303,6 @@ export default class HoverVideoPlayer extends HTMLElement {
         this._stopPlayback();
         break;
       default:
-        this._updatePlaybackState("paused");
     }
   }
 
@@ -319,15 +325,25 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Updates state and starts video playback. Triggered when the user hovers over the hover target,
    * but can be called programmatically for controlled playback.
    */
-  hover(event?: Event) {
-    this._activeHoverTarget = event?.currentTarget ?? null;
+  hover() {
     if (!this.isHovering) {
       this._cleanupTimeoutIDs();
 
       this._updateIsHovering(true);
-      this.dispatchEvent(new CustomEvent("hoverstart"));
-
       this._updatePlaybackState("loading");
+    }
+  }
+
+  /**
+   * Handler for hover events on hover target
+   */
+  _onHover(event: Event) {
+    this._activeHoverTarget = event.currentTarget;
+    if (!this.isHovering) {
+      this.dispatchEvent(new CustomEvent("hoverstart", {
+        detail: this._activeHoverTarget,
+      }));
+      this.hover();
     }
   }
 
@@ -342,9 +358,17 @@ export default class HoverVideoPlayer extends HTMLElement {
 
       this._updateIsHovering(false);
       this._updatePlaybackState("paused");
-
-      this.dispatchEvent(new CustomEvent("hoverend"));
     }
+  }
+
+  /**
+   * Handler for blur events on hover target
+   */
+  _onBlur(event: Event) {
+    this.dispatchEvent(new CustomEvent("hoverend", {
+      detail: event.currentTarget,
+    }));
+    this.blur();
   }
 
   /**
@@ -370,11 +394,11 @@ export default class HoverVideoPlayer extends HTMLElement {
     const hoverTargets = Symbol.iterator in this._hoverTarget ? this._hoverTarget : [this._hoverTarget];
 
     for (const hoverTarget of hoverTargets) {
-      hoverTarget.addEventListener("mouseenter", this.hover);
-      hoverTarget.addEventListener("mouseleave", this.blur);
-      hoverTarget.addEventListener("focus", this.hover);
-      hoverTarget.addEventListener("blur", this.blur);
-      hoverTarget.addEventListener("touchstart", this.hover, {
+      hoverTarget.addEventListener("mouseenter", this._onHover);
+      hoverTarget.addEventListener("mouseleave", this._onBlur);
+      hoverTarget.addEventListener("focus", this._onHover);
+      hoverTarget.addEventListener("blur", this._onBlur);
+      hoverTarget.addEventListener("touchstart", this._onHover, {
         passive: true,
       });
     }
@@ -389,11 +413,11 @@ export default class HoverVideoPlayer extends HTMLElement {
     const hoverTargets = Symbol.iterator in this._hoverTarget ? this._hoverTarget : [this._hoverTarget];
 
     for (const hoverTarget of hoverTargets) {
-      hoverTarget.removeEventListener("mouseenter", this.hover);
-      hoverTarget.removeEventListener("mouseleave", this.blur);
-      hoverTarget.removeEventListener("focus", this.hover);
-      hoverTarget.removeEventListener("blur", this.blur);
-      hoverTarget.removeEventListener("touchstart", this.hover);
+      hoverTarget.removeEventListener("mouseenter", this._onHover);
+      hoverTarget.removeEventListener("mouseleave", this._onBlur);
+      hoverTarget.removeEventListener("focus", this._onHover);
+      hoverTarget.removeEventListener("blur", this._onBlur);
+      hoverTarget.removeEventListener("touchstart", this._onHover);
     }
   }
 

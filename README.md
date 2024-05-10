@@ -575,3 +575,15 @@ or the `blur()` method is manually called.
 const player = document.querySelector("hover-video-player");
 player.addEventListener("hoverend", () => console.log("The user is no longer hovering!"));
 ```
+
+#### `playbackstatechange`
+
+The player component will emit a custom `"playbackstatechange"` event when the player's playback state changes.
+This is a `CustomEvent` where the `detail` will be the new playback state, matching the [`data-playback-state`](#data-playback-state) attribute.
+
+```js
+const player = document.querySelector("hover-video-player");
+player.addEventListener("playbackstatechange", (evt) => {
+  console.log("The new playback state is...", evt.detail);
+});
+```
