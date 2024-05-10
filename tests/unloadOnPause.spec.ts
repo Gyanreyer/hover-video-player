@@ -86,11 +86,7 @@ test("if unload-on-pause is set and the video does not have a preload attribute 
     await expect(video).toHaveJSProperty("preload", "metadata");
 });
 
-test("interacts with restart-on-pause as expected", async ({ page, browserName }) => {
-    test.skip(
-        // Skip this test for webkit browsers in CI environments; this consistently fails in CI even though it passes locally
-        Boolean(process.env.CI) && browserName === "webkit",
-    )
+test("interacts with restart-on-pause as expected", async ({ page }) => {
     await page.goto("/tests/unloadOnPause.html");
 
     const component = await page.locator("[data-testid='no-preload-attribute']");
