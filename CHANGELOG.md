@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.2
+
+- Makes `hoverstart` and `hoverend` events cancelable for more options with controlling playback
+- Allows `hoverstart` and `hoverend` events to still be emitted when the component is controlled; the component just won't update playback state in response to these events
+
 ## v1.2.1
 
 - Adds `playbackstatechanged` event

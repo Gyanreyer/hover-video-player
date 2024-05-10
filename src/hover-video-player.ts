@@ -212,7 +212,7 @@ export default class HoverVideoPlayer extends HTMLElement {
 
     this.shadowRoot?.addEventListener("slotchange", this._onSlotChange);
 
-    if (!this.controlled && !this.hasAttribute("hover-target")) {
+    if (!this.hasAttribute("hover-target")) {
       this._addHoverTargetListeners();
     }
 
@@ -340,10 +340,14 @@ export default class HoverVideoPlayer extends HTMLElement {
   _onHover(event: Event) {
     this._activeHoverTarget = event.currentTarget;
     if (!this.isHovering) {
-      this.dispatchEvent(new CustomEvent("hoverstart", {
+      const wasNotCanceled = this.dispatchEvent(new CustomEvent("hoverstart", {
         detail: this._activeHoverTarget,
+        cancelable: true,
       }));
-      this.hover();
+      // If evt.preventDefault() is called for this event, we'll cancel starting playback
+      if (wasNotCanceled && !this.controlled) {
+        this.hover();
+      }
     }
   }
 
@@ -365,10 +369,14 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Handler for blur events on hover target
    */
   _onBlur(event: Event) {
-    this.dispatchEvent(new CustomEvent("hoverend", {
+    const wasNotCanceled = this.dispatchEvent(new CustomEvent("hoverend", {
       detail: event.currentTarget,
+      cancelable: true,
     }));
-    this.blur();
+    // If evt.preventDefault() is called for this event, we'll cancel pausing playback
+    if (wasNotCanceled && !this.controlled) {
+      this.blur();
+    }
   }
 
   /**
@@ -613,9 +621,7 @@ export default class HoverVideoPlayer extends HTMLElement {
 
     this._removeHoverTargetListeners();
     this._hoverTarget = newHoverTarget;
-    if (!this.controlled) {
-      this._addHoverTargetListeners();
-    }
+    this._addHoverTargetListeners();
   }
 
   /**
