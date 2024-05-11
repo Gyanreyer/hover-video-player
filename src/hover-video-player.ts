@@ -93,13 +93,14 @@ export default class HoverVideoPlayer extends HTMLElement {
     return this._hoverTarget;
   }
 
+  private _controlled: boolean = false;
+
   /**
    * Whether the player is being controlled by manual calls to hover() and blur() in JS instead of
    * using hover events on the hover target element.
    */
   public get controlled() {
-    const controlledAttribute = this.getAttribute("controlled");
-    return controlledAttribute !== null && controlledAttribute !== "false";
+    return this._controlled;
   }
 
   /**
@@ -107,6 +108,7 @@ export default class HoverVideoPlayer extends HTMLElement {
    * using hover events on the hover target element.
    */
   public set controlled(newValue: boolean) {
+    this._controlled = newValue;
     if (!newValue) {
       this.removeAttribute("controlled");
     } else {
@@ -261,11 +263,7 @@ export default class HoverVideoPlayer extends HTMLElement {
         this._playbackStartDelay = newValue ? HoverVideoPlayer._getMillisecondsFromTimeString(newValue) : 0;
         break;
       case "controlled":
-        if (newValue !== null && newValue !== "false") {
-          this._removeHoverTargetListeners();
-        } else {
-          this._addHoverTargetListeners();
-        }
+        this.controlled = newValue !== null && newValue !== "false";
         break;
       case "data-playback-state":
         // If the data-playback-state attribute was externally manipulated
@@ -339,15 +337,17 @@ export default class HoverVideoPlayer extends HTMLElement {
    */
   _onHover(event: Event) {
     this._activeHoverTarget = event.currentTarget;
-    if (!this.isHovering) {
-      const wasNotCanceled = this.dispatchEvent(new CustomEvent("hoverstart", {
-        detail: this._activeHoverTarget,
-        cancelable: true,
-      }));
-      // If evt.preventDefault() is called for this event, we'll cancel starting playback
-      if (wasNotCanceled && !this.controlled) {
-        this.hover();
-      }
+    const hoverStartEvent = new CustomEvent("hoverstart", {
+      detail: event,
+      cancelable: true,
+    });
+    if (this.controlled) {
+      hoverStartEvent.preventDefault();
+    }
+    const wasNotCanceled = this.dispatchEvent(hoverStartEvent);
+    // If evt.preventDefault() is called for this event, we'll cancel starting playback
+    if (wasNotCanceled) {
+      this.hover();
     }
   }
 
@@ -369,12 +369,16 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Handler for blur events on hover target
    */
   _onBlur(event: Event) {
-    const wasNotCanceled = this.dispatchEvent(new CustomEvent("hoverend", {
-      detail: event.currentTarget,
+    const hoverEndEvent = new CustomEvent("hoverend", {
+      detail: event,
       cancelable: true,
-    }));
+    });
+    if (this.controlled) {
+      hoverEndEvent.preventDefault();
+    }
+    const wasNotCanceled = this.dispatchEvent(hoverEndEvent);
     // If evt.preventDefault() is called for this event, we'll cancel pausing playback
-    if (wasNotCanceled && !this.controlled) {
+    if (wasNotCanceled) {
       this.blur();
     }
   }

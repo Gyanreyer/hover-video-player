@@ -430,6 +430,8 @@ The optional boolean `"controlled"` attribute will disable standard event handli
 
 You can programmatically start and stop playback on a controlled component by using the `.hover()` and `.blur()` methods, or manipulating the [`"data-playback-state"`](#data-playback-state) attribute.
 
+This option is essentially a shorthand for calling `event.preventDefault()` on both [`"hoverstart"`](#hoverstart) and [`"hoverend"`](#hoverend) events.
+
 This can also be accessed and updated in JS with the `controlled` property.
 
 ```html
@@ -558,11 +560,13 @@ console.log(player.dataset.playbackState); // "paused"
 
 #### `hoverstart`
 
-The player component will emit a custom `"hoverstart"` event when a user hovers over the player's hover target to start playback,
-or the `hover()` method is manually called.
+The player component will emit a `"hoverstart"` event when a user hovers over the player's hover target to start playback. `"hoverstart"` events are cancelable `CustomEvents`.
 
-`"hoverstart"` events are cancelable. If you wish to intercept a `"hoverstart"` event and prevent the component from proceeding to start playback,
-you can call `event.preventDefault()` in a `hoverstart` listener.
+Each event will include the `Event` object from the originating hover target event on `event.detail`.
+
+If you wish to intercept a `"hoverstart"` event and prevent the component from proceeding to start playback,
+you can call `event.preventDefault()` in a `hoverend` listener. If the component is [controlled](#controlled),
+both `"hoverstart"` and `"hoverend"` events will automatically be canceled without requiring any further action from you.
 
 ```js
 const player = document.querySelector("hover-video-player");
@@ -572,16 +576,20 @@ player.addEventListener("hoverstart", (evt) => {
     // Call preventDefault to prevent the component from proceeding to start playback in response to this `hoverstart` event
     evt.preventDefault();
   }
+
+  console.log("The hoverstart interaction originated on this element:", evt.detail.currentTarget);
 });
 ```
 
 #### `hoverend`
 
-The player component will emit a custom `"hoverend"` event when a user stops hovering over the player's hover target to stop playback,
-or the `blur()` method is manually called.
+The player component will emit a `"hoverend"` event when a user stops hovering over the player's hover target to stop playback. `"hoverend"` events are cancelable `CustomEvents`.
 
-`"hoverend"` events are cancelable. If you wish to intercept a `"hoverend"` event and prevent the component from proceeding to pause playback,
-you can call `event.preventDefault()` in a `hoverend` listener.
+Each event will include the `Event` object from the originating hover target event on `event.detail`.
+
+If you wish to intercept a `"hoverend"` event and prevent the component from proceeding to pause playback,
+you can call `event.preventDefault()` in a `hoverend` listener. If the component is [controlled](#controlled),
+both `"hoverstart"` and `"hoverend"` events will automatically be canceled without requiring any further action from you.
 
 ```js
 const player = document.querySelector("hover-video-player");
@@ -592,6 +600,8 @@ player.addEventListener("hoverend", (evt) => {
     // Call preventDefault to prevent the component from proceeding to pause playback in response to this `hoverend` event
     evt.preventDefault();
   }
+
+  console.log("The hoverend interaction originated on this element:", evt.detail.currentTarget);
 });
 ```
 
