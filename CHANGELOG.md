@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.3
+
+- Fix `hoverstart` and `hoverend` events not being emitted when the component is controlled; the events should fire but just be automatically canceled to leave playback state updates to the implementer
+- Make `hoverstart` and `hoverend` events include the originating `Event` object on their `detail`
+
 ## v1.2.2
 
 - Makes `hoverstart` and `hoverend` events cancelable for more options with controlling playback
