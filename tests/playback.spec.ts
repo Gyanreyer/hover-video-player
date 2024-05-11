@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type HoverVideoPlayer from '../src/hover-video-player';
+import { hoverOut, hoverOver } from './utils/hoverEvents';
 
 test('hover-video-player component starts and stops playback as expected when the user hovers', async ({ context, page, isMobile }) => {
   await context.route("**/*.mp4", (route) => new Promise((resolve) => {
@@ -12,7 +13,7 @@ test('hover-video-player component starts and stops playback as expected when th
   await page.goto('/tests/playback.html');
 
   const hoverVideoPlayer = await page.locator("hover-video-player");
-  const video = await page.locator("hover-video-player video");
+  const video = await hoverVideoPlayer.locator("video");
 
   await hoverVideoPlayer.evaluateHandle((el: HoverVideoPlayer) => el.addEventListener("playbackstatechange", (evt) => {
     (window as any).playbackstatechangeCalls ??= [];
@@ -29,13 +30,7 @@ test('hover-video-player component starts and stops playback as expected when th
     expect(video).toHaveJSProperty("paused", true),
   ]);
 
-  // Mouse over or tap the video player depending on if this is a touch device to start playback
-  if (isMobile) {
-    // Using dispatchEvent instead of tap() because tap gets a little flaky on the iPhone browser for some reason
-    await hoverVideoPlayer.dispatchEvent("touchstart");
-  } else {
-    await hoverVideoPlayer.hover();
-  }
+  await hoverOver(hoverVideoPlayer, isMobile);
 
   // The component's attributes should be updated to show that the user is hovering and the video is loading
   await Promise.all([
@@ -50,11 +45,7 @@ test('hover-video-player component starts and stops playback as expected when th
   ]);
 
   // Mouse out or tap outside of the player to stop playback
-  if (isMobile) {
-    await page.dispatchEvent("body", "touchstart");
-  } else {
-    await page.mouse.move(0, 0);
-  }
+  hoverOut(hoverVideoPlayer, isMobile);
 
   // The component's state should be updated to show that the user is no longer hovering and the video is paused again
   await Promise.all([

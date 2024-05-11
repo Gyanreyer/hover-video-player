@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { hoverOut, hoverOver } from './utils/hoverEvents';
 
-test("restartOnPause causes the video to reset to the beginning when paused", async ({ page }) => {
+test("restartOnPause causes the video to reset to the beginning when paused", async ({ page, isMobile }) => {
     await page.goto("/tests/restartOnPause.html");
 
     const hoverVideoPlayer = await page.locator("hover-video-player");
@@ -11,12 +12,12 @@ test("restartOnPause causes the video to reset to the beginning when paused", as
 
     await expect(video).toHaveJSProperty("currentTime", 0);
 
-    await hoverVideoPlayer.hover();
+    await hoverOver(hoverVideoPlayer, isMobile);
 
     await expect(video).toHaveJSProperty("paused", false);
     await expect(video).not.toHaveJSProperty("currentTime", 0);
 
-    await page.mouse.move(0, 0);
+    await hoverOut(hoverVideoPlayer, isMobile);
 
     await expect(video).toHaveJSProperty("currentTime", 0);
 
@@ -27,11 +28,11 @@ test("restartOnPause causes the video to reset to the beginning when paused", as
     await expect(hoverVideoPlayer).not.toHaveAttribute("restart-on-pause", "");
     await expect(hoverVideoPlayer).toHaveJSProperty("restartOnPause", false);
 
-    await hoverVideoPlayer.hover();
+    await hoverOver(hoverVideoPlayer, isMobile);
 
     await expect(video).not.toHaveJSProperty("currentTime", 0);
 
-    await page.mouse.move(0, 0);
+    await hoverOut(hoverVideoPlayer, isMobile);
 
     await expect(video).not.toHaveJSProperty("currentTime", 0);
 

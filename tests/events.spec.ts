@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import type HoverVideoPlayer from '../src/hover-video-player';
+import { hoverOver, hoverOut } from './utils/hoverEvents';
 
-test("fires hoverstart and hoverend events as expected", async ({ page }) => {
+test("fires hoverstart and hoverend events as expected", async ({ page, isMobile }) => {
     await page.goto("/tests/events.html");
 
     const component = await page.locator("hover-video-player");
@@ -11,18 +12,18 @@ test("fires hoverstart and hoverend events as expected", async ({ page }) => {
     await expect(hoverStartCounter).toHaveText("0");
     await expect(hoverEndCounter).toHaveText("0");
 
-    await component.hover();
+    await hoverOver(component, isMobile);
 
     await expect(hoverStartCounter).toHaveText("1");
     await expect(hoverEndCounter).toHaveText("0");
 
-    await page.mouse.move(0, 0);
+    await hoverOut(component, isMobile);
 
     await expect(hoverStartCounter).toHaveText("1");
     await expect(hoverEndCounter).toHaveText("1");
 });
 
-test("hoverstart events can be prevented", async ({ page }) => {
+test("hoverstart events can be prevented", async ({ page, isMobile }) => {
     await page.goto("/tests/events.html");
 
     const component = await page.locator("hover-video-player");
@@ -34,11 +35,11 @@ test("hoverstart events can be prevented", async ({ page }) => {
         el.addEventListener("hoverstart", (window as any).hoverStartListener);
     });
 
-    await component.hover();
+    await hoverOver(component, isMobile);
 
     await expect(component).not.toHaveAttribute("data-is-hovering", "");
 
-    await page.mouse.move(0, 0);
+    await hoverOut(component, isMobile);
 
     // Remoe the listener and hover again
     await component.evaluate((el: HoverVideoPlayer) => {
@@ -46,13 +47,13 @@ test("hoverstart events can be prevented", async ({ page }) => {
     });
 
     // Now hovering should work
-    await component.hover();
+    await hoverOver(component, isMobile);
     await expect(component).toHaveAttribute("data-is-hovering", "");
 
-    await page.mouse.move(0, 0);
+    await hoverOut(component, isMobile);
 });
 
-test("hoverend events can be prevented", async ({ page }) => {
+test("hoverend events can be prevented", async ({ page, isMobile }) => {
     await page.goto("/tests/events.html");
 
     const component = await page.locator("hover-video-player");
@@ -64,11 +65,11 @@ test("hoverend events can be prevented", async ({ page }) => {
         el.addEventListener("hoverend", (window as any).hoverEndListener);
     });
 
-    await component.hover();
+    await hoverOver(component, isMobile);
 
     await expect(component).toHaveAttribute("data-is-hovering", "");
 
-    await page.mouse.move(0, 0);
+    await hoverOut(component, isMobile);
 
     // Still hovering because hoverend was cancelled
     await expect(component).toHaveAttribute("data-is-hovering", "");
@@ -78,10 +79,10 @@ test("hoverend events can be prevented", async ({ page }) => {
     });
 
     // Re-hover so we can test that hoverend is not prevented
-    await component.hover();
+    await hoverOver(component, isMobile);
     await expect(component).toHaveAttribute("data-is-hovering", "");
 
     // Now mousing out should work
-    await page.mouse.move(0, 0);
+    await hoverOut(component, isMobile);
     await expect(component).not.toHaveAttribute("data-is-hovering", "");
 });

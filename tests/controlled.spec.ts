@@ -1,16 +1,17 @@
 import { test, expect } from '@playwright/test';
 import type HoverVideoPlayer from '../src/hover-video-player';
+import { hoverOver, hoverOut } from './utils/hoverEvents';
 
-test("hover and blur methods control playback as expected", async ({ page }) => {
+test("hover and blur methods control playback as expected", async ({ page, isMobile }) => {
   await page.goto("/tests/controlled.html");
 
   const hoverVideoPlayer = await page.locator("hover-video-player");
-  const video = await page.locator("hover-video-player video");
+  const video = await hoverVideoPlayer.locator("video");
 
   await expect(hoverVideoPlayer).toHaveJSProperty("controlled", true);
 
   // Hover interactions are ignored
-  await hoverVideoPlayer.hover();
+  await hoverOver(hoverVideoPlayer, isMobile);
   await Promise.all([
     expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", ""),
     expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "paused"),
@@ -27,7 +28,7 @@ test("hover and blur methods control playback as expected", async ({ page }) => 
   ]);
 
   // Blur events should also be ignored
-  await page.mouse.move(0, 0);
+  await hoverOut(hoverVideoPlayer, isMobile);
 
   await Promise.all([
     expect(hoverVideoPlayer).toHaveAttribute("data-is-hovering", ""),
@@ -45,7 +46,7 @@ test("hover and blur methods control playback as expected", async ({ page }) => 
   ]);
 });
 
-test("hover events don't update playback state if the component's controlled state changes", async ({ page }) => {
+test("hover events don't update playback state if the component's controlled state changes", async ({ page, isMobile }) => {
   await page.goto("/tests/controlled.html");
 
   const hoverVideoPlayer = await page.locator("hover-video-player");
@@ -54,17 +55,17 @@ test("hover events don't update playback state if the component's controlled sta
     (window as any).hoverStartCount = 0;
     (window as any).hoverEndCount = 0;
 
-    el.addEventListener("hoverstart", () => {
+    el.addEventListener("hoverstart", (evt) => {
       (window as any).hoverStartCount++;
     });
-    el.addEventListener("hoverend", () => {
+    el.addEventListener("hoverend", (evt) => {
       (window as any).hoverEndCount++;
     });
   });
 
   // Hover interactions are ignored when controlled
   await expect(hoverVideoPlayer).toHaveJSProperty("controlled", true);
-  await hoverVideoPlayer.hover();
+  await hoverOver(hoverVideoPlayer, isMobile);
   await Promise.all([
     // The hover/playback state should not be updated, but the hoverstart event did run
     expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", ""),
@@ -74,7 +75,7 @@ test("hover events don't update playback state if the component's controlled sta
   ]);
 
   // Move mouse away so we can try and hover again
-  await page.mouse.move(0, 0);
+  await hoverOut(hoverVideoPlayer, isMobile);
 
   await Promise.all([
     expect(await page.evaluate(() => (window as any).hoverStartCount)).toBe(1),
@@ -83,7 +84,7 @@ test("hover events don't update playback state if the component's controlled sta
 
   // Disabling the controlled state should allow hover interactions to control playback again
   await hoverVideoPlayer.evaluateHandle((el: HoverVideoPlayer) => { el.controlled = false });
-  await hoverVideoPlayer.hover();
+  await hoverOver(hoverVideoPlayer, isMobile);
   await Promise.all([
     expect(hoverVideoPlayer).toHaveAttribute("data-is-hovering", ""),
     expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "playing"),
@@ -93,7 +94,7 @@ test("hover events don't update playback state if the component's controlled sta
 
   // Mouse out is ignored when controlled again
   await hoverVideoPlayer.evaluateHandle((el: HoverVideoPlayer) => { el.controlled = true });
-  await page.mouse.move(0, 0);
+  await hoverOut(hoverVideoPlayer, isMobile);
   await Promise.all([
     expect(hoverVideoPlayer).toHaveAttribute("data-is-hovering", ""),
     expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "playing"),
@@ -102,7 +103,7 @@ test("hover events don't update playback state if the component's controlled sta
   ]);
 
   // Hover again so we can disable controlled state and hover back out
-  await hoverVideoPlayer.hover();
+  await hoverOver(hoverVideoPlayer, isMobile);
 
   await Promise.all([
     expect(await page.evaluate(() => (window as any).hoverStartCount)).toBe(3),
@@ -110,7 +111,7 @@ test("hover events don't update playback state if the component's controlled sta
   ]);
 
   await hoverVideoPlayer.evaluateHandle((el: HoverVideoPlayer) => { el.controlled = false });
-  await page.mouse.move(0, 0);
+  await hoverOut(hoverVideoPlayer, isMobile);
   await Promise.all([
     expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", ""),
     expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "paused"),
@@ -119,7 +120,7 @@ test("hover events don't update playback state if the component's controlled sta
   ]);
 });
 
-test("controlled attribute is disabled with 'false' value", async ({ page }) => {
+test("controlled attribute is disabled with 'false' value", async ({ page, isMobile }) => {
   await page.goto("/tests/controlled.html");
 
   const hoverVideoPlayer = await page.locator("hover-video-player");
@@ -132,7 +133,7 @@ test("controlled attribute is disabled with 'false' value", async ({ page }) => 
   // The controlled attribute is set, but its value is "false" so it's disabled
   await expect(hoverVideoPlayer).toHaveJSProperty("controlled", false);
 
-  await hoverVideoPlayer.hover();
+  await hoverOver(hoverVideoPlayer, isMobile);
 
   // The component's attributes should be updated to show that the user is hovering and the video is loading
   await Promise.all([
@@ -140,7 +141,7 @@ test("controlled attribute is disabled with 'false' value", async ({ page }) => 
     expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "playing"),
   ]);
 
-  await page.mouse.move(0, 0);
+  await hoverOut(hoverVideoPlayer, isMobile);
 
   await Promise.all([
     expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", ""),

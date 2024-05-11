@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.4
+
+- Fix to ensure components will respect any initial `data-playback-state` attribute value
+  - This means autoplay-like behavior can be achieved by setting `data-playback-state="playing"` in your HTML
+- Tightens up quirky behavior where duplicate `hoverstart` events could be emitted on mobile
+
 ## v1.2.3
 
 - Fix `hoverstart` and `hoverend` events not being emitted when the component is controlled; the events should fire but just be automatically canceled to leave playback state updates to the implementer

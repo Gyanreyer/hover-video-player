@@ -4,8 +4,8 @@ import type HoverVideoPlayer from '../src/hover-video-player';
 test("playback transitions correctly when data-playback-state attribute is manually manipulated", async ({ page }) => {
   await page.goto("/tests/dataPlaybackState.html");
 
-  const hoverVideoPlayer = await page.locator("hover-video-player");
-  const video = await page.locator("hover-video-player video");
+  const hoverVideoPlayer = await page.locator("[data-testid=no-initial-playback-state]");
+  const video = await hoverVideoPlayer.locator("video");
 
   await expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "paused");
 
@@ -28,4 +28,17 @@ test("playback transitions correctly when data-playback-state attribute is manua
   await hoverVideoPlayer.evaluateHandle((el: HoverVideoPlayer) => { el.removeAttribute("data-playback-state"); });
   await expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "paused");
   await expect(video).toHaveJSProperty("paused", true);
+});
+
+test("an initial data-playback-state attribute will be respected", async ({ context, page }) => {
+  await page.goto("/tests/dataPlaybackState.html");
+
+  const hoverVideoPlayer = await page.locator("[data-testid=initial-playing-state]");
+  const video = await hoverVideoPlayer.locator("video");
+
+  await expect(hoverVideoPlayer).toHaveAttribute("data-playback-state", "playing");
+  await expect(hoverVideoPlayer).not.toHaveAttribute("data-is-hovering", "");
+  await expect(video).toHaveJSProperty("paused", false);
+
+  await hoverVideoPlayer.evaluateHandle((el: HoverVideoPlayer) => { el.dataset.playbackState = "paused"; });
 });

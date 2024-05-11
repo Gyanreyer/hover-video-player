@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { hoverOut, hoverOver } from './utils/hoverEvents';
 
 const HAVE_NOTHING = 0;
 const HAVE_ENOUGH_DATA = 4;
 
-test("unload-on-pause unloads video sources as expected for videos whose source is set by the src attribute", async ({ page }) => {
+test("unload-on-pause unloads video sources as expected for videos whose source is set by the src attribute", async ({ page, isMobile }) => {
     await page.goto("/tests/unloadOnPause.html");
 
     const componentWithSrcAttribute = await page.locator("[data-testid='src-attribute']");
@@ -17,12 +18,12 @@ test("unload-on-pause unloads video sources as expected for videos whose source 
     ]);
 
     // Hover to start playback
-    await componentWithSrcAttribute.hover();
+    await hoverOver(componentWithSrcAttribute, isMobile);
     // The video's source should be loaded now that it's playing
     await expect(videoWithSrcAttribute).toHaveJSProperty("readyState", HAVE_ENOUGH_DATA);
 
     // Mouse out to pause and unload the video
-    await page.mouse.move(0, 0);
+    await hoverOut(componentWithSrcAttribute, isMobile);
     // The video's source should be unloaded
     await expect(videoWithSrcAttribute).toHaveJSProperty("readyState", HAVE_NOTHING);
 
@@ -30,12 +31,12 @@ test("unload-on-pause unloads video sources as expected for videos whose source 
     await componentWithSrcAttribute.evaluate((componentElement: HTMLElement & { unloadOnPause: boolean }) => componentElement.unloadOnPause = false);
 
     // Hover to start playback
-    await componentWithSrcAttribute.hover();
+    await hoverOver(componentWithSrcAttribute, isMobile);
     // The video's source should be loaded now that it's playing
     await expect(videoWithSrcAttribute).toHaveJSProperty("readyState", HAVE_ENOUGH_DATA);
 
     // Mouse out to pause and unload the video
-    await page.mouse.move(0, 0);
+    await hoverOut(componentWithSrcAttribute, isMobile);
     // The video should not have been unloaded
     await expect(videoWithSrcAttribute).toHaveJSProperty("readyState", HAVE_ENOUGH_DATA);
 });
@@ -54,12 +55,12 @@ test("unload-on-pause unloads video sources as expected for videos whose source 
     ]);
 
     // Hover to start playback
-    await componentWithSourceTag.hover();
+    await hoverOver(componentWithSourceTag, false);
     // The video's source should be loaded now that it's playing
     await expect(videoWithSourceTag).toHaveJSProperty("readyState", HAVE_ENOUGH_DATA);
 
     // Mouse out to pause and unload the video
-    await page.mouse.move(0, 0);
+    await hoverOut(componentWithSourceTag, false);
     // The video's source should be unloaded
     await expect(videoWithSourceTag).toHaveJSProperty("readyState", HAVE_NOTHING);
 
@@ -67,12 +68,12 @@ test("unload-on-pause unloads video sources as expected for videos whose source 
     await componentWithSourceTag.evaluate((componentElement: HTMLElement & { unloadOnPause: boolean }) => componentElement.unloadOnPause = false);
 
     // Hover to start playback
-    await componentWithSourceTag.hover();
+    await hoverOver(componentWithSourceTag, false);
     // The video's source should be loaded now that it's playing
     await expect(videoWithSourceTag).toHaveJSProperty("readyState", HAVE_ENOUGH_DATA);
 
     // Mouse out to pause and unload the video
-    await page.mouse.move(0, 0);
+    await hoverOut(componentWithSourceTag, false);
     // The video should not have been unloaded
     await expect(videoWithSourceTag).toHaveJSProperty("readyState", HAVE_ENOUGH_DATA);
 });
@@ -96,12 +97,12 @@ test("interacts with restart-on-pause as expected", async ({ page }) => {
     await expect(component).toHaveJSProperty("restartOnPause", false);
 
     // Hover to start playback
-    await component.hover();
+    await hoverOver(component, false);
 
     await expect(video).not.toHaveJSProperty("currentTime", 0);
 
     // Mouse out to pause and unload the video
-    await page.mouse.move(0, 0);
+    await hoverOut(component, false);
 
     // The video should not have been reset to the beginning
     await expect(video).not.toHaveJSProperty("currentTime", 0);
@@ -110,12 +111,12 @@ test("interacts with restart-on-pause as expected", async ({ page }) => {
     await component.evaluate((componentElement: HTMLElement & { restartOnPause: boolean }) => componentElement.restartOnPause = true);
 
     // Hover to start playback
-    await component.hover();
+    await hoverOver(component, false);
 
     await expect(video).not.toHaveJSProperty("currentTime", 0);
 
     // Mouse out to pause and unload the video
-    await page.mouse.move(0, 0);
+    await hoverOut(component, false);
 
     // The video should have been reset to the bueginning
     await expect(video).toHaveJSProperty("currentTime", 0);

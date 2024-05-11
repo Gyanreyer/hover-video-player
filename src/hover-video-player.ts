@@ -1,3 +1,5 @@
+type PlaybackState = "paused" | "loading" | "playing";
+
 export default class HoverVideoPlayer extends HTMLElement {
   // CSS stylesheet string which we'll use to style each component
   private static _styles: string = require("./styles.css");
@@ -117,7 +119,7 @@ export default class HoverVideoPlayer extends HTMLElement {
   }
 
   // The current playback state of the player.
-  private _playbackState: "paused" | "loading" | "playing" = "paused";
+  private _playbackState: PlaybackState = "paused";
 
   public get playbackState() {
     return this._playbackState;
@@ -126,8 +128,11 @@ export default class HoverVideoPlayer extends HTMLElement {
   // The element which the user is currently hovering over. Null if the user is not hovering over a target.
   private _activeHoverTarget: EventTarget | null = null;
 
-  // Whether the user is currently hovering over the hover target.
-  public isHovering: boolean = false;
+  // Whether the user is currently hovering over the hover target; this will remain false if the hover event is canceled
+  private _isHoverActive: boolean = false;
+  // Whether the user is hovering over the hover target at all, regardless of whether the hover event was canceled
+  private _isHoveringOnTarget: boolean = false;
+
   // Whether this component has a paused overlay; this will determine whether we should
   // delay pausing the video to ensure the overlay has time to finish fading in.
   private _hasPausedOverlay: boolean = false;
@@ -269,31 +274,35 @@ export default class HoverVideoPlayer extends HTMLElement {
         // If the data-playback-state attribute was externally manipulated
         // and is now out of sync with the internal playback state, update the internal state
         if (newValue !== this._playbackState) {
-          this._updatePlaybackState(newValue as typeof this._playbackState);
+          this._updatePlaybackState(newValue);
         }
         break;
       default:
     }
   }
 
-  private _updatePlaybackState(newPlaybackState: typeof this._playbackState) {
+  private _updatePlaybackState(newPlaybackState: string | null) {
     if (this._playbackState === newPlaybackState) return;
+
+    let playbackState: PlaybackState;
 
     if (newPlaybackState !== "loading" && newPlaybackState !== "playing" && newPlaybackState !== "paused") {
       // If the new playback state is invalid, default to "paused"
-      newPlaybackState = "paused";
+      playbackState = "paused";
     } else if (this._playbackState === "paused" && newPlaybackState === "playing") {
       // We can't jump directly from "paused" to "playing"; step back to "loading" state first
-      newPlaybackState = "loading";
+      playbackState = "loading";
+    } else {
+      playbackState = newPlaybackState;
     }
 
-    this._playbackState = newPlaybackState;
-    this.setAttribute("data-playback-state", newPlaybackState);
+    this._playbackState = playbackState;
+    this.setAttribute("data-playback-state", playbackState);
     this.dispatchEvent(new CustomEvent("playbackstatechange", {
-      detail: newPlaybackState,
+      detail: playbackState,
     }));
 
-    switch (newPlaybackState) {
+    switch (playbackState) {
       case "loading":
         this._startPlayback();
         break;
@@ -311,7 +320,7 @@ export default class HoverVideoPlayer extends HTMLElement {
    * @param {boolean} isHovering - The new value for isHovering
    */
   private _updateIsHovering(isHovering: boolean) {
-    this.isHovering = isHovering;
+    this._isHoverActive = isHovering;
     if (isHovering) {
       this.setAttribute("data-is-hovering", "");
     } else {
@@ -324,7 +333,7 @@ export default class HoverVideoPlayer extends HTMLElement {
    * but can be called programmatically for controlled playback.
    */
   hover() {
-    if (!this.isHovering) {
+    if (!this._isHoverActive) {
       this._cleanupTimeoutIDs();
 
       this._updateIsHovering(true);
@@ -336,6 +345,11 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Handler for hover events on hover target
    */
   _onHover(event: Event) {
+    if (this._isHoveringOnTarget) {
+      return;
+    }
+    this._isHoveringOnTarget = true;
+
     this._activeHoverTarget = event.currentTarget;
     const hoverStartEvent = new CustomEvent("hoverstart", {
       detail: event,
@@ -357,7 +371,7 @@ export default class HoverVideoPlayer extends HTMLElement {
    */
   blur() {
     this._activeHoverTarget = null;
-    if (this.isHovering) {
+    if (this._isHoverActive) {
       this._cleanupTimeoutIDs();
 
       this._updateIsHovering(false);
@@ -369,6 +383,11 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Handler for blur events on hover target
    */
   _onBlur(event: Event) {
+    if (!this._isHoveringOnTarget) {
+      return;
+    }
+    this._isHoveringOnTarget = false;
+
     const hoverEndEvent = new CustomEvent("hoverend", {
       detail: event,
       cancelable: true,
@@ -387,15 +406,17 @@ export default class HoverVideoPlayer extends HTMLElement {
    * Handler checks touch events and pauses playback if the user touches outside of the hover target.
    */
   private _onTouchOutsideOfHoverTarget(event: TouchEvent) {
-    // Don't do anything if the user isn't currently hovering over the player
-    if (!this.isHovering) return;
+    // Don't do anything if the user isn't currently hovering over the hover target
+    if (!this._isHoveringOnTarget) {
+      return;
+    }
 
     if (
       !(this._activeHoverTarget instanceof Node) ||
       !(event.target instanceof Node) ||
       !this._activeHoverTarget.contains(event.target)
     ) {
-      this.blur();
+      this._onBlur(event);
     }
   }
 
@@ -579,6 +600,12 @@ export default class HoverVideoPlayer extends HTMLElement {
       }
 
       this.video = videoElement;
+      // The video changed so it will inherently be in a paused state initially.
+      // We should update the internal playback state to reset to paused and then
+      // attempt to transition back to match the data-playback-state attribute.
+      const playbackState = this.getAttribute("data-playback-state");
+      this._updatePlaybackState("paused");
+      this._updatePlaybackState(playbackState);
     } else {
       console.error("hover-video-player failed to find a video element in the default slot.");
     }

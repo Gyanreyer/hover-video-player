@@ -2,11 +2,13 @@
   <script type="module" src="/dist/index.mjs"></script>
 </head>
 <body>
-  <hover-video-player>
-    <video
-      src="/tests/assets/BigBuckBunny.mp4?cb=dataPlaybackState"
-      playsinline
-      muted
-    ></video>
+  <hover-video-player data-testid="no-initial-playback-state">
+    <video src="/tests/assets/BigBuckBunny.mp4" playsinline muted></video>
+  </hover-video-player>
+  <hover-video-player
+    data-playback-state="playing"
+    data-testid="initial-playing-state"
+  >
+    <video src="/tests/assets/BigBuckBunny.mp4" playsinline muted></video>
   </hover-video-player>
 </body>
