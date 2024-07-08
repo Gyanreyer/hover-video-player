@@ -45,7 +45,7 @@ test('hover-video-player component starts and stops playback as expected when th
   ]);
 
   // Mouse out or tap outside of the player to stop playback
-  hoverOut(hoverVideoPlayer, isMobile);
+  await hoverOut(hoverVideoPlayer, isMobile);
 
   // The component's state should be updated to show that the user is no longer hovering and the video is paused again
   await Promise.all([

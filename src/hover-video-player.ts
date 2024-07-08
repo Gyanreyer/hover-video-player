@@ -68,8 +68,10 @@ export default class HoverVideoPlayer extends HTMLElement {
     return this._playbackStartDelay;
   }
 
-  // The video element which this player component is controling
-  public video: HTMLVideoElement | null = null;
+  // The video element which this player component is controlling;
+  // this will usually be a <video>, but can also be any custom element
+  // which is compliant with HTMLMediaElement APIs.
+  public video: HTMLMediaElement | null = null;
   // The element which we will watch for hover events to start and stop video playback.
   // This maps to the element with the selector set in the "hover-target" attribute if applicable,
   // or else will just be this component's host element.
@@ -476,7 +478,7 @@ export default class HoverVideoPlayer extends HTMLElement {
     this._playbackStartTimeoutID = window.setTimeout(() => {
       video.play().then(() => {
         this._updatePlaybackState("playing");
-      }).catch((error: DOMException) => {
+      }, (error: DOMException) => {
         if (
           // If this was an abort error because the playback promise was interrupted by a load/pause call,
           // let's just ignore it; these errors are perfectly fine and happen frequently in normal usage.
@@ -579,36 +581,78 @@ export default class HoverVideoPlayer extends HTMLElement {
 
         // Re-load the video with the sources removed so we unload everything from memory
         videoElement.load();
-
       }
     }, overlayTransitionDuration);
   }
 
+  private _cancelPreviousSlotChange: (() => void) | null = null;
+
   /**
    * Grabs the video element when the video slot changes so we can control it.
    */
-  private _onDefaultSlotChange(target: HTMLSlotElement) {
-    const defaultSlotNodes = target.assignedNodes({ flatten: true });
-
-    const videoElement = defaultSlotNodes.find((node): node is HTMLVideoElement => node instanceof HTMLVideoElement);
-    if (videoElement) {
-      if (this.unloadOnPause && (!videoElement.preload || videoElement.preload === "auto")) {
-        // If the unloadOnPause property is set and the video's preload property is set to "auto",
-        // we need to change it to "metadata"; otherwise, the browser will start pre-loading the entire
-        // video and defeat the whole purpose of unloading the video when it's paused.
-        videoElement.preload = "metadata";
-      }
-
-      this.video = videoElement;
-      // The video changed so it will inherently be in a paused state initially.
-      // We should update the internal playback state to reset to paused and then
-      // attempt to transition back to match the data-playback-state attribute.
-      const playbackState = this.getAttribute("data-playback-state");
-      this._updatePlaybackState("paused");
-      this._updatePlaybackState(playbackState);
-    } else {
-      console.error("hover-video-player failed to find a video element in the default slot.");
+  private async _onDefaultSlotChange(target: HTMLSlotElement) {
+    if (this._cancelPreviousSlotChange) {
+      this._cancelPreviousSlotChange();
+      this._cancelPreviousSlotChange = null;
     }
+
+    const defaultSlotNodes = target.assignedNodes();
+
+    let videoElement: HTMLMediaElement | null = null;
+    let potentialCustomVideoElement: HTMLElement | null = null;
+    for (const node of defaultSlotNodes) {
+      if (node instanceof HTMLMediaElement) {
+        videoElement = node;
+        break;
+      } else if (node instanceof HTMLElement && node.tagName.includes("-")) {
+        // Treat any custom element as a potential video element
+        // We won't break in case there's a video element later in the slot
+        potentialCustomVideoElement = node;
+      }
+    }
+
+    if (!videoElement && potentialCustomVideoElement) {
+      try {
+        // Wait for the custom element to be defined so we can check that it implements
+        // basic HTMLMediaElement APIs
+        await new Promise<unknown>((resolve, reject) => {
+          this._cancelPreviousSlotChange = reject;
+          return customElements.whenDefined(potentialCustomVideoElement.tagName.toLowerCase()).then(resolve, reject);
+        });
+
+        // If the custom element is defined and appears to implement basic HTMLMediaElement APIs, we'll use it as the video element
+        if ("play" in potentialCustomVideoElement && "pause" in potentialCustomVideoElement) {
+          videoElement = potentialCustomVideoElement as HTMLMediaElement;
+
+          if (this.playbackState !== "paused") {
+            // Now that we have a video element, we should start playback if the playback state is not paused (ie, the user started hovering before the video component was ready)
+            this._startPlayback();
+          }
+        }
+      } catch {
+        // empty catch here; just need to swallow abort errors
+      }
+    }
+
+    if (!videoElement) {
+      console.error("hover-video-player failed to find a valid video element in the default slot.");
+      return;
+    }
+
+    if (this.unloadOnPause && (!videoElement.preload || videoElement.preload === "auto")) {
+      // If the unloadOnPause property is set and the video's preload property is set to "auto",
+      // we need to change it to "metadata"; otherwise, the browser will start pre-loading the entire
+      // video and defeat the whole purpose of unloading the video when it's paused.
+      videoElement.preload = "metadata";
+    }
+
+    this.video = videoElement;
+    // The video changed so it will inherently be in a paused state initially.
+    // We should update the internal playback state to reset to paused and then
+    // attempt to transition back to match the data-playback-state attribute.
+    const playbackState = this.getAttribute("data-playback-state");
+    this._updatePlaybackState("paused");
+    this._updatePlaybackState(playbackState);
   }
 
   /**
