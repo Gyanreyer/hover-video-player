@@ -1,0 +1,63 @@
+<head>
+  <script type="module" src="/dist/index.mjs"></script>
+  <script type="module">
+    // Custom element which implements basic media APIs (not technically all of them, but enough for a test)
+    class MyPlayer extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = `<video playsinline muted></video>`;
+      }
+
+      get video() {
+        return this.shadowRoot.querySelector("video");
+      }
+
+      connectedCallback(){
+        this.video.src = this.getAttribute("src");
+        this.video.load();
+      }
+
+      get currentTime() {
+        return this.video.currentTime;
+      }
+
+      set currentTime(value) {
+        this.video.currentTime = value;
+      }
+
+      play() {
+        return this.video.play();
+      }
+
+      pause() {
+        return this.video.pause();
+      }
+
+      load() {
+        return this.video.load();
+      }
+    }
+
+    customElements.define("my-player", MyPlayer);
+
+    // Custom element which doesn't implement media APIs
+    class MyInvalidPlayer extends HTMLElement {}
+
+    customElements.define("my-invalid-player", MyInvalidPlayer);
+  </script>
+</head>
+<body>
+  <hover-video-player data-testid="ce-player">
+    <my-player src="/tests/assets/BigBuckBunny.mp4"></my-player>
+  </hover-video-player>
+  <hover-video-player data-testid="cancel-waiting-for-ce-player">
+    <my-undefined-player
+      src="/tests/assets/BigBuckBunny.mp4"
+    ></my-undefined-player>
+  </hover-video-player>
+  <hover-video-player data-testid="invalid-ce-player">
+    <my-invalid-player
+      src="/tests/assets/BigBuckBunny.mp4"
+    ></my-invalid-player>
+</body>

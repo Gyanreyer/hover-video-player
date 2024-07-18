@@ -13,6 +13,7 @@ This is a port of the [react-hover-video-player library](https://github.com/Gyan
 - Support for mouse, touchscreen, and keyboard focus interactions
 - Built-in support for thumbnails and loading states
 - Adds handling for weird edge cases that can arise when managing video playback, such as gracefully falling back to playing the video without sound if the browser's autoplay policy blocks un-muted playback
+- Supports HTMLMediaElement API-compliant custom elements, allowing for use of other media sources like YouTube, Vimeo, and HLS
 
 ## Installation
 
@@ -615,4 +616,77 @@ const player = document.querySelector("hover-video-player");
 player.addEventListener("playbackstatechange", (evt) => {
   console.log("The new playback state is...", evt.detail);
 });
+```
+
+
+### Alternative media sources
+
+The native `<video>` element is mostly oriented toward playing statically hosted video files,
+but you may wish to use a different media source such as a YouTube video, Vimeo video, or even an m3u8 HLS video stream.
+
+This component will support any custom video player element which implements core HTMLMediaElement APIs.
+[Mux maintains an incredibly good collection of media elements](https://github.com/muxinc/media-elements/tree/main) which do exactly that. Any of these custom elements should be able to be used in place of a `<video>` and work as expected.
+
+> [!WARNING]
+>
+> Some of `hover-video-player`'s APIs are not designed to be used
+> with custom elements and may have unexpected interactions.
+>
+> In particular, be careful with [`unload-on-pause`](#unload-on-pause),
+> as it most likely will not be able to unload the video's source as expected.
+>
+> It is also worth noting that some of these custom elements may have issues with playback with audio. For instance, `youtube-element`
+> may fail to play without the `muted` attribute unless you perform a click interaction on the element to play it first.
+
+#### Example: controlling a YouTube video
+
+Using Mux's [`youtube-video`](https://github.com/muxinc/media-elements/tree/main/packages/youtube-video-element) custom element.
+
+```html
+<script
+  type="module"
+  src="https://cdn.jsdelivr.net/npm/youtube-video-element@1"
+></script>
+
+<hover-video-player>
+  <youtube-video
+    src="https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+    playsinline
+    muted
+  ></youtube-video>
+</hover-video-player>
+```
+
+#### Example: controlling a Vimeo video
+
+Using Mux's [`vimeo-video`](https://github.com/muxinc/media-elements/tree/main/packages/vimeo-video-element) custom element.
+
+```html
+<script
+  type="module"
+  src="https://cdn.jsdelivr.net/npm/vimeo-video-element@1.0/+esm"
+></script>
+
+<hover-video-player>
+  <vimeo-video
+    src="https://vimeo.com/648359100"
+  ></vimeo-video>
+</hover-video-player>
+```
+
+#### Example: controlling an m3u8 HLS stream
+
+Using Mux's [`hls-video`](https://github.com/muxinc/media-elements/tree/main/packages/hls-video-element) custom element.
+
+```html
+<script
+  type="module"
+  src="https://cdn.jsdelivr.net/npm/hls-video-element@1.1/+esm"
+></script>
+
+<hover-video-player>
+  <hls-video
+    src="https://stream.mux.com/r4rOE02cc95tbe3I00302nlrHfT023Q3IedFJW029w018KxZA.m3u8"
+  ></hls-video>
+</hover-video-player>
 ```
